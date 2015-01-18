@@ -18,43 +18,6 @@
 
 ros::Publisher pub;
 
-bool enforceIntensitySimilarity (const pcl::PointXYZINormal& point_a, const pcl::PointXYZINormal& point_b, float squared_distance)
-{
-  if (fabs (point_a.intensity - point_b.intensity) < 5.0f)
-    return (true);
-  else
-    return (false);
-}
-
-bool enforceCurvatureOrIntensitySimilarity (const pcl::PointXYZINormal& point_a, const pcl::PointXYZINormal& point_b, float squared_distance)
-{
-  Eigen::Map<const Eigen::Vector3f> point_a_normal = point_a.normal, point_b_normal = point_b.normal;
-  if (fabs (point_a.intensity - point_b.intensity) < 5.0f)
-    return (true);
-  if (fabs (point_a_normal.dot (point_b_normal)) < 0.05)
-    return (true);
-  return (false);
-}
-
-bool  customRegionGrowing (const pcl::PointXYZINormal& point_a, const pcl::PointXYZINormal& point_b, float squared_distance)
-{
-  Eigen::Map<const Eigen::Vector3f> point_a_normal = point_a.normal, point_b_normal = point_b.normal;
-  if (squared_distance < 0.1)
-  {
-    if (fabs (point_a.intensity - point_b.intensity) < 8.0f)
-      return (true);
-    if (fabs (point_a_normal.dot (point_b_normal)) < 0.06)
-      return (true);
-  }
-  else
-  {
-    if (fabs (point_a.intensity - point_b.intensity) < 3.0f)
-      return (true);
-  }
-  return (false);
-}
-
-
 void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 {
 	// Create a container for the data.
@@ -80,8 +43,6 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
   vg.filter(*cloud_boxel);
 
   pcl::SACSegmentation<pcl::PointXYZI> seg;
-  //seg.setEpsAngle( 180.0f * (M_PI/180.0f) );
-  //seg.setAxis(axis);
   seg.setOptimizeCoefficients(true);
   seg.setModelType(pcl::SACMODEL_PLANE);
   seg.setMethodType(pcl::SAC_RANSAC);
@@ -105,45 +66,6 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
     extract.filter(*cloud_boxel);
   }
 
-  /*
-  pcl::copyPointCloud (*cloud_boxel, *cloud_with_normals);
-  pcl::NormalEstimation<pcl::PointXYZI, pcl::PointXYZINormal> ne;
-  ne.setInputCloud (cloud_boxel);
-  ne.setSearchMethod (search_tree);
-  ne.setRadiusSearch (0.15);
-  ne.compute (*cloud_with_normals);
-
-	pcl::ConditionalEuclideanClustering<pcl::PointXYZINormal> cec (true);
-	cec.setInputCloud (cloud_with_normals);
-
-  //cec.setConditionFunction (&enforceIntensitySimilarity);
-  //cec.setConditionFunction (&enforceIntensitySimilarity);
-  cec.setConditionFunction (&customRegionGrowing);
-	// Points within this distance from one another are going to need to validate the enforceIntensitySimilarity function to be part of the same cluster:
-	cec.setClusterTolerance (1.0f);
-	// Size constraints for the clusters:
-	cec.setMinClusterSize (20);
-	cec.setMaxClusterSize (25000);
-	// The resulting clusters (an array of pointindices):
-	cec.segment (*clusters);
-	// The clusters that are too small or too large in size can also be extracted separately:
-	cec.getRemovedClusters (small_clusters, large_clusters);
-
-	for (int i = 0; i < small_clusters->size (); ++i)
-		for (int j = 0; j < (*small_clusters)[i].indices.size (); ++j)
-			cloud_boxel->points[(*small_clusters)[i].indices[j]].intensity = -2.0;
-	for (int i = 0; i < large_clusters->size (); ++i)
-		for (int j = 0; j < (*large_clusters)[i].indices.size (); ++j)
-			cloud_boxel->points[(*large_clusters)[i].indices[j]].intensity = +10.0;
-
-	for (int i = 0; i < clusters->size (); ++i)
-	{
-		int label = rand () % 8;
-		for (int j = 0; j < (*clusters)[i].indices.size (); ++j)
-			cloud_boxel->points[(*clusters)[i].indices[j]].intensity = label;
-	}
-*/
-
   tree->setInputCloud( cloud_boxel );
   std::vector<pcl::PointIndices> cluster_indices;
   pcl::EuclideanClusterExtraction<pcl::PointXYZI> ec;
@@ -164,20 +86,10 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
     for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
     {
       cloud_boxel -> points[*pit].intensity = ( 15000 / size ) * now_itr;
-      //cloud_cluster->points.push_back (cloud_boxel->points[*pit]);
-    }/*
-    cloud_cluster->width = cloud_cluster->points.size ();
-    cloud_cluster->height = 1;
-    cloud_cluster->is_dense = true;*/
+    }
   }
 
-
-	//pcl::toROSMsg( *cloud_cluster, output );
   pcl::toROSMsg(*cloud_boxel, output);
-  /*for(int k=0;k<4;k++){
-    std::cout << output.header.frame_id<<std::endl;
-    std::cout << input->header.frame_id<<std::endl;
-  }*/
 
 
 	// Publish the data.
