@@ -84,14 +84,53 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
   //int size = cluster_indices.size();
   //int color_max = 15000;
   /*---------------------------------------------*/
+  int now_cluster;
   for(std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin();it != cluster_indices.end (); ++it)
   {
     //Now iterator count
-    int now_itr = it - cluster_indices.begin();
+    now_cluster = it - cluster_indices.begin();
+    float min_point[3];
+    float max_point[3];
+    int now_point;
+    bool is_highIntensity = false;
     for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
     {
-      //for Debug intensity set
-      //cloud_boxel -> points[*pit].intensity = ( 15000 / size ) * now_itr;
+      now_point = pit - it->indices.begin();
+      if( now_point == 0 ){
+        min_point[0] = cloud_boxel -> points[*pit].x;
+        min_point[1] = cloud_boxel -> points[*pit].y;
+        min_point[2] = cloud_boxel -> points[*pit].z;
+        max_point[0] = cloud_boxel -> points[*pit].x;
+        max_point[1] = cloud_boxel -> points[*pit].y;
+        max_point[2] = cloud_boxel -> points[*pit].z;
+      }
+      if( (min_point[0] * min_point[1] * min_point[2]) > ( cloud_boxel -> points[*pit].x * cloud_boxel -> points[*pit].y * cloud_boxel -> points[*pit].z) ){
+        min_point[0] = cloud_boxel -> points[*pit].x;
+        min_point[1] = cloud_boxel -> points[*pit].y;
+        min_point[2] = cloud_boxel -> points[*pit].z;
+      }
+      if( (max_point[0] * max_point[1] * max_point[2]) < ( cloud_boxel -> points[*pit].x * cloud_boxel -> points[*pit].y * cloud_boxel -> points[*pit].z) ){
+        max_point[0] = cloud_boxel -> points[*pit].x;
+        max_point[1] = cloud_boxel -> points[*pit].y;
+        max_point[2] = cloud_boxel -> points[*pit].z;
+      }
+      if( cloud_boxel -> points[*pit].intensity > 10000){
+          is_highIntensity = true;
+      }
+      /*---for Debug intensity set---*/
+      //cloud_boxel -> points[*pit].intensity = ( 15000 / size ) * now_cluster;
+      /*-----------------------------*/
+    }
+    if( is_highIntensity ){
+      std::cout<<"HighIntensity"<<std::endl;
+      float width,depth,height;
+      width = max_point[0] - min_point[0];
+      depth = max_point[1] - min_point[1];
+      height = max_point[2] - min_point[2];
+      std::cout << width << "," << depth << "," << height << "," << std::endl;
+      if( (width < 0.9 && width > 0.5) && (depth < 0.9 && depth > 0.5) && (height < 1.6 && height > 1.0 ) ){
+        std::cout << width / 2 << "," << depth/2 << "," << height/2 << "," << std::endl;
+      }
     }
   }
 
