@@ -37,7 +37,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 
 	pcl::VoxelGrid<pcl::PointXYZI> vg;
 	vg.setInputCloud(conv_input);
-  vg.setLeafSize(0.025,0.025,0.025);
+  vg.setLeafSize(0.01,0.01,0.01);
   vg.setDownsampleAllData(true);
   vg.filter(*cloud_boxel);
 
@@ -48,7 +48,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
   seg.setMethodType(pcl::SAC_RANSAC);
   //Iteration count
   seg.setMaxIterations(1000);
-  seg.setDistanceThreshold(0.02);
+  seg.setDistanceThreshold(0.01);
 
   //Plane Extract
   pcl::ExtractIndices<pcl::PointXYZI> extract;
@@ -71,7 +71,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
   tree->setInputCloud( cloud_boxel );
   std::vector<pcl::PointIndices> cluster_indices;
   pcl::EuclideanClusterExtraction<pcl::PointXYZI> ec;
-  ec.setClusterTolerance(0.1);
+  ec.setClusterTolerance(0.05);
   ec.setMinClusterSize(100);
   ec.setMaxClusterSize(25000);
   ec.setSearchMethod(tree);
@@ -81,8 +81,8 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
   int j=0;
   pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZI>);
   /*---for Debug Visualize(intensity coloring)---*/
-  //int size = cluster_indices.size();
-  //int color_max = 15000;
+  int size = cluster_indices.size();
+  int color_max = 15000;
   /*---------------------------------------------*/
   int now_cluster;
   for(std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin();it != cluster_indices.end (); ++it)
@@ -93,49 +93,67 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
     float max_point[3];
     int now_point;
     bool is_highIntensity = false;
+    //High intensity judge
+    for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
+    {
+      if( cloud_boxel -> points[*pit].intensity > 15000){
+        is_highIntensity = true;
+      }
+    }
     for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
     {
       now_point = pit - it->indices.begin();
-      if( now_point == 0 ){
-        min_point[0] = cloud_boxel -> points[*pit].x;
-        min_point[1] = cloud_boxel -> points[*pit].y;
-        min_point[2] = cloud_boxel -> points[*pit].z;
-        max_point[0] = cloud_boxel -> points[*pit].x;
-        max_point[1] = cloud_boxel -> points[*pit].y;
-        max_point[2] = cloud_boxel -> points[*pit].z;
-      }
-      if( (min_point[0] * min_point[1] * min_point[2]) > ( cloud_boxel -> points[*pit].x * cloud_boxel -> points[*pit].y * cloud_boxel -> points[*pit].z) ){
-        min_point[0] = cloud_boxel -> points[*pit].x;
-        min_point[1] = cloud_boxel -> points[*pit].y;
-        min_point[2] = cloud_boxel -> points[*pit].z;
-      }
-      if( (max_point[0] * max_point[1] * max_point[2]) < ( cloud_boxel -> points[*pit].x * cloud_boxel -> points[*pit].y * cloud_boxel -> points[*pit].z) ){
-        max_point[0] = cloud_boxel -> points[*pit].x;
-        max_point[1] = cloud_boxel -> points[*pit].y;
-        max_point[2] = cloud_boxel -> points[*pit].z;
-      }
-      if( cloud_boxel -> points[*pit].intensity > 10000){
-          is_highIntensity = true;
-      }
       /*---for Debug intensity set---*/
-      //cloud_boxel -> points[*pit].intensity = ( 15000 / size ) * now_cluster;
+      if( !is_highIntensity ){
+        cloud_boxel -> points[*pit].intensity = ( 15000 / size ) * now_cluster;
+      }
       /*-----------------------------*/
+      /*---measure size of high intensity index---*/
+      else{
+        if( now_point == 0 ){
+          min_point[0] = cloud_boxel -> points[*pit].x;
+          min_point[1] = cloud_boxel -> points[*pit].y;
+          min_point[2] = cloud_boxel -> points[*pit].z;
+          max_point[0] = cloud_boxel -> points[*pit].x;
+          max_point[1] = cloud_boxel -> points[*pit].y;
+          max_point[2] = cloud_boxel -> points[*pit].z;
+        }
+        if( min_point[0] > cloud_boxel -> points[*pit].x ){
+          min_point[0] = cloud_boxel -> points[*pit].x;
+        }
+        else if( max_point[0] < cloud_boxel -> points[*pit].x ){
+          max_point[0] = cloud_boxel -> points[*pit].x;
+        }
+        if( min_point[1] > cloud_boxel -> points[*pit].x ){
+          min_point[1] = cloud_boxel -> points[*pit].x;
+        }
+        else if( max_point[1] < cloud_boxel -> points[*pit].x ){
+          max_point[1] = cloud_boxel -> points[*pit].x;
+        }
+        if( min_point[2] > cloud_boxel -> points[*pit].x ){
+          min_point[2] = cloud_boxel -> points[*pit].x;
+        }
+        else if( max_point[2] < cloud_boxel -> points[*pit].x ){
+          max_point[2] = cloud_boxel -> points[*pit].x;
+        }
+      }
     }
     if( is_highIntensity ){
       std::cout<<"HighIntensity"<<std::endl;
       float width,depth,height;
-      width = max_point[0] - min_point[0];
-      depth = max_point[1] - min_point[1];
-      height = max_point[2] - min_point[2];
+      width = fabs(max_point[0] - min_point[0]);
+      depth = fabs(max_point[1] - min_point[1]);
+      height = fabs(max_point[2] - min_point[2]);
+      std::cout<<"max_z"<<max_point[2]<<"min_z"<<min_point[2]<<std::endl;
       std::cout << width << "," << depth << "," << height << "," << std::endl;
-      if( (width < 0.9 && width > 0.5) && (depth < 0.9 && depth > 0.5) && (height < 1.6 && height > 1.0 ) ){
-        std::cout << width / 2 << "," << depth/2 << "," << height/2 << "," << std::endl;
+
+      if( (width < 1.0 && width > 0.5) && (depth < 2.0 && depth > 1.0) && (height < 2.3 && height > 1.3 ) ){
+        std::cout << "Find Target" << std::endl;
       }
     }
   }
 
   pcl::toROSMsg(*cloud_boxel, output);
-
 
 	// Publish the data.
 	pub.publish (output);
