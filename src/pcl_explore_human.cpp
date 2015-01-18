@@ -31,8 +31,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_boxel(new pcl::PointCloud<pcl::PointXYZI>());
   pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud_with_normals(new pcl::PointCloud<pcl::PointXYZINormal>());
 
-  //Eigen::Vector3f axis = Eigen::Vector3f(1.0,0.0,0.0);
-
+  //Conversion PointCloud2 intensity field name to PointXYZI intensity field name.
   input->fields[3].name = "intensity";
   pcl::fromROSMsg(*input, *conv_input);
 
@@ -42,13 +41,16 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
   vg.setDownsampleAllData(true);
   vg.filter(*cloud_boxel);
 
+  //Plane segmentation
   pcl::SACSegmentation<pcl::PointXYZI> seg;
   seg.setOptimizeCoefficients(true);
   seg.setModelType(pcl::SACMODEL_PLANE);
   seg.setMethodType(pcl::SAC_RANSAC);
+  //Iteration count
   seg.setMaxIterations(1000);
   seg.setDistanceThreshold(0.02);
 
+  //Plane Extract
   pcl::ExtractIndices<pcl::PointXYZI> extract;
   int i=0, nr_points = (int) cloud_boxel->points.size();
   while( cloud_boxel->points.size() > 0.3 * nr_points )
@@ -78,14 +80,18 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 
   int j=0;
   pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZI>);
-  int size = cluster_indices.size();
-  int color_max = 15000;
+  /*---for Debug Visualize(intensity coloring)---*/
+  //int size = cluster_indices.size();
+  //int color_max = 15000;
+  /*---------------------------------------------*/
   for(std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin();it != cluster_indices.end (); ++it)
   {
+    //Now iterator count
     int now_itr = it - cluster_indices.begin();
     for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
     {
-      cloud_boxel -> points[*pit].intensity = ( 15000 / size ) * now_itr;
+      //for Debug intensity set
+      //cloud_boxel -> points[*pit].intensity = ( 15000 / size ) * now_itr;
     }
   }
 
