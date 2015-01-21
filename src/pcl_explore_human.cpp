@@ -13,6 +13,7 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/PCLPointCloud2.h>
 
@@ -29,15 +30,22 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
   pcl::search::KdTree<pcl::PointXYZI>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZI>);
   pcl::PointCloud<pcl::PointXYZI>::Ptr conv_input(new pcl::PointCloud<pcl::PointXYZI>());
 	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_boxel(new pcl::PointCloud<pcl::PointXYZI>());
+	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZI>());
   pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud_with_normals(new pcl::PointCloud<pcl::PointXYZINormal>());
 
   //Conversion PointCloud2 intensity field name to PointXYZI intensity field name.
   input->fields[3].name = "intensity";
   pcl::fromROSMsg(*input, *conv_input);
 
+	pcl::StatisticalOutlierRemoval<pcl::PointXYZI> sor;
+	sor.setInputCloud(conv_input);
+	sor.setMeanK(50);
+	sor.setStddevMulThresh(1.0);
+	sor.filter(*cloud_filtered);
+
 	pcl::VoxelGrid<pcl::PointXYZI> vg;
-	vg.setInputCloud(conv_input);
-  vg.setLeafSize(0.01,0.01,0.01);
+	vg.setInputCloud(cloud_filtered);
+  vg.setLeafSize(0.005,0.005,0.005);
   vg.setDownsampleAllData(true);
   vg.filter(*cloud_boxel);
 
@@ -73,7 +81,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
   pcl::EuclideanClusterExtraction<pcl::PointXYZI> ec;
   ec.setClusterTolerance(0.05);
   ec.setMinClusterSize(100);
-  ec.setMaxClusterSize(25000);
+  ec.setMaxClusterSize(100000);
   ec.setSearchMethod(tree);
   ec.setInputCloud(cloud_boxel);
   ec.extract(cluster_indices);
@@ -144,10 +152,8 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
       width = fabs(max_point[0] - min_point[0]);
       depth = fabs(max_point[1] - min_point[1]);
       height = fabs(max_point[2] - min_point[2]);
-      std::cout<<"max_z"<<max_point[2]<<"min_z"<<min_point[2]<<std::endl;
-      std::cout << width << "," << depth << "," << height << "," << std::endl;
-
-      if( (width < 1.0 && width > 0.5) && (depth < 2.0 && depth > 1.0) && (height < 2.3 && height > 1.3 ) ){
+      std::cout << "size:" << width << "," << depth << "," << height << "," << std::endl;
+      if( (width < 1.0 && width > 0.5) && (depth < 2.5 && depth > 1.0) && (height < 2.3 && height > 1.3 ) ){
         std::cout << "Find Target" << std::endl;
       }
     }
