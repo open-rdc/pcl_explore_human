@@ -30,7 +30,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
   pcl::search::KdTree<pcl::PointXYZI>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZI>);
   pcl::PointCloud<pcl::PointXYZI>::Ptr conv_input(new pcl::PointCloud<pcl::PointXYZI>());
 	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_boxel(new pcl::PointCloud<pcl::PointXYZI>());
-	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZI>());
+	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_outlier_filtered(new pcl::PointCloud<pcl::PointXYZI>());
   pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud_with_normals(new pcl::PointCloud<pcl::PointXYZINormal>());
 
   //Conversion PointCloud2 intensity field name to PointXYZI intensity field name.
@@ -41,10 +41,10 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	sor.setInputCloud(conv_input);
 	sor.setMeanK(50);
 	sor.setStddevMulThresh(1.0);
-	sor.filter(*cloud_filtered);
+	sor.filter(*cloud_outlier_filtered);
 
 	pcl::VoxelGrid<pcl::PointXYZI> vg;
-	vg.setInputCloud(cloud_filtered);
+	vg.setInputCloud(cloud_outlier_filtered);
   vg.setLeafSize(0.005,0.005,0.005);
   vg.setDownsampleAllData(true);
   vg.filter(*cloud_boxel);
@@ -79,7 +79,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
   tree->setInputCloud( cloud_boxel );
   std::vector<pcl::PointIndices> cluster_indices;
   pcl::EuclideanClusterExtraction<pcl::PointXYZI> ec;
-  ec.setClusterTolerance(0.05);
+  ec.setClusterTolerance(0.07);
   ec.setMinClusterSize(100);
   ec.setMaxClusterSize(100000);
   ec.setSearchMethod(tree);
@@ -87,13 +87,13 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
   ec.extract(cluster_indices);
 
   int j=0;
-  pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZI>);
+	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_all_filtered(new pcl::PointCloud<pcl::PointXYZI>());
   /*---for Debug Visualize(intensity coloring)---*/
   int size = cluster_indices.size();
   int color_max = 15000;
   /*---------------------------------------------*/
   int now_cluster;
-  for(std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin();it != cluster_indices.end (); ++it)
+	for(std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin();it != cluster_indices.end (); ++it)
   {
     //Now iterator count
     now_cluster = it - cluster_indices.begin();
@@ -106,6 +106,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
     {
       if( cloud_boxel -> points[*pit].intensity > 15000){
         is_highIntensity = true;
+				break;
       }
     }
     for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
@@ -118,6 +119,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
       /*-----------------------------*/
       /*---measure size of high intensity index---*/
       else{
+				cloud_all_filtered->points.push_back(cloud_boxel->points[*pit]);
         if( now_point == 0 ){
           min_point[0] = cloud_boxel -> points[*pit].x;
           min_point[1] = cloud_boxel -> points[*pit].y;
@@ -132,17 +134,17 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
         else if( max_point[0] < cloud_boxel -> points[*pit].x ){
           max_point[0] = cloud_boxel -> points[*pit].x;
         }
-        if( min_point[1] > cloud_boxel -> points[*pit].x ){
-          min_point[1] = cloud_boxel -> points[*pit].x;
+        if( min_point[1] > cloud_boxel -> points[*pit].y ){
+          min_point[1] = cloud_boxel -> points[*pit].y;
         }
-        else if( max_point[1] < cloud_boxel -> points[*pit].x ){
-          max_point[1] = cloud_boxel -> points[*pit].x;
+        else if( max_point[1] < cloud_boxel -> points[*pit].y ){
+          max_point[1] = cloud_boxel -> points[*pit].y;
         }
-        if( min_point[2] > cloud_boxel -> points[*pit].x ){
-          min_point[2] = cloud_boxel -> points[*pit].x;
+        if( min_point[2] > cloud_boxel -> points[*pit].z ){
+          min_point[2] = cloud_boxel -> points[*pit].z;
         }
-        else if( max_point[2] < cloud_boxel -> points[*pit].x ){
-          max_point[2] = cloud_boxel -> points[*pit].x;
+        else if( max_point[2] < cloud_boxel -> points[*pit].z ){
+          max_point[2] = cloud_boxel -> points[*pit].z;
         }
       }
     }
@@ -152,14 +154,22 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
       width = fabs(max_point[0] - min_point[0]);
       depth = fabs(max_point[1] - min_point[1]);
       height = fabs(max_point[2] - min_point[2]);
+			std::cout << "y" << max_point[1] << "," << min_point[1] << std::endl;
+			std::cout << "z" << max_point[2] << "," << min_point[2] << std::endl;
       std::cout << "size:" << width << "," << depth << "," << height << "," << std::endl;
-      if( (width < 1.0 && width > 0.5) && (depth < 2.5 && depth > 1.0) && (height < 2.3 && height > 1.3 ) ){
+      if( ((width < 1.0) && (width > 0.5)) && ((depth < 1.0) && (depth > 0.4)) && ((height < 1.8) && (height > 1.0)) ){
         std::cout << "Find Target" << std::endl;
       }
+			else{
+				cloud_all_filtered->erase(cloud_all_filtered->begin()+1,cloud_all_filtered->end());
+			}
     }
   }
 
-  pcl::toROSMsg(*cloud_boxel, output);
+	pcl::toROSMsg(*cloud_all_filtered, output);
+  //pcl::toROSMsg(*cloud_boxel, output);
+
+	output.header = input -> header;
 
 	// Publish the data.
 	pub.publish (output);
