@@ -128,12 +128,6 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	      if( now_point == 0 ){
 					min_pt = cloud_boxel -> points[*pit];
 					max_pt = cloud_boxel -> points[*pit];
-	        // min_point[0] = cloud_boxel -> points[*pit].x;
-	        // min_point[1] = cloud_boxel -> points[*pit].y;
-	        // min_point[2] = cloud_boxel -> points[*pit].z;
-	        // max_point[0] = cloud_boxel -> points[*pit].x;
-	        // max_point[1] = cloud_boxel -> points[*pit].y;
-	        // max_point[2] = cloud_boxel -> points[*pit].z;
 	      }
 				if( min_pt.x > cloud_boxel -> points[*pit].x ){
 					min_pt.x = cloud_boxel -> points[*pit].x;
@@ -152,51 +146,30 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 				}
 				else if( max_pt.z < cloud_boxel -> points[*pit].z ){
 					max_pt.z = cloud_boxel -> points[*pit].z;
-				}
-	      // if( min_point[0] > cloud_boxel -> points[*pit].x ){
-	      //   min_point[0] = cloud_boxel -> points[*pit].x;
-	      // }
-	      // else if( max_point[0] < cloud_boxel -> points[*pit].x ){
-	      //   max_point[0] = cloud_boxel -> points[*pit].x;
-	      // }
-	      // if( min_point[1] > cloud_boxel -> points[*pit].y ){
-	      //   min_point[1] = cloud_boxel -> points[*pit].y;
-	      // }
-	      // else if( max_point[1] < cloud_boxel -> points[*pit].y ){
-	      //   max_point[1] = cloud_boxel -> points[*pit].y;
-	      // }
-	      // if( min_point[2] > cloud_boxel -> points[*pit].z ){
-	      //   min_point[2] = cloud_boxel -> points[*pit].z;
-	      // }
-	      // else if( max_point[2] < cloud_boxel -> points[*pit].z ){
-	      //   max_point[2] = cloud_boxel -> points[*pit].z;
-	      // }
-	    }
+	    	}
+			}
 		}
-    if( is_highIntensity ){
-      std::cout<<"HighIntensity"<<std::endl;
-      float width,depth,height;
+	  if( is_highIntensity ){
+	    std::cout<<"HighIntensity"<<std::endl;
+	    float width,depth,height;
 			width = fabs(max_pt.x - min_pt.x);
 			depth = fabs(max_pt.y - min_pt.y);
 			height = fabs(max_pt.z - min_pt.z);
-      // width = fabs(max_point[0] - min_point[0]);
-      // depth = fabs(max_point[1] - min_point[1]);
-      // height = fabs(max_point[2] - min_point[2]);
-			// std::cout << "y" << max_point[1] << "," << min_point[1] << std::endl;
-			// std::cout << "z" << max_point[2] << "," << min_point[2] << std::endl;
-      std::cout << "size:" << width << "," << depth << "," << height << "," << std::endl;
-      if( ((width < 1.0) && (width > 0.5)) && ((depth < 1.0) && (depth > 0.4)) && ((height < 1.8) && (height > 1.0)) ){
-        std::cout << "Find Target" << std::endl;
-      }
+	    std::cout << "size:" << width << "," << depth << "," << height << "," << std::endl;
+	    if( ((width < 1.0) && (width > 0.5)) && ((depth < 1.0) && (depth > 0.4)) && ((height < 1.8) && (height > 1.0)) ){
+	      std::cout << "Find Target" << std::endl;
+	    }
 			else{
+				//if cloud is not target, leaving only one point to erase all.
 				cloud_all_filtered->erase(cloud_all_filtered->begin()+1,cloud_all_filtered->end());
 			}
-    }
+	  }
   }
 
 	pcl::toROSMsg(*cloud_all_filtered, output);
   //pcl::toROSMsg(*cloud_boxel, output);
 
+	//add header to output cloud.
 	output.header = input -> header;
 
 	// Publish the data.
