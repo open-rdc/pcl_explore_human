@@ -18,6 +18,8 @@
 #include <pcl/features/normal_3d.h>
 #include <pcl/PCLPointCloud2.h>
 
+#include <sys/time.h>
+
 ros::Publisher pub;
 
 void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
@@ -34,8 +36,12 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_outlier_filtered(new pcl::PointCloud<pcl::PointXYZI>());
   pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud_with_normals(new pcl::PointCloud<pcl::PointXYZINormal>());
 
-	bool sacSegmentFlag = false;
-
+	/*--- for debug ---*/
+	bool sacSegmentFlag = true;
+	struct timeval s, f;
+	//Get start time
+	gettimeofday(&s, NULL);
+	/*---           ---*/
   //Conversion PointCloud2 intensity field name to PointXYZI intensity field name.
   input->fields[3].name = "intensity";
   pcl::fromROSMsg(*input, *conv_input);
@@ -64,10 +70,12 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	  //Plane segmentation
 	  pcl::SACSegmentation<pcl::PointXYZI> seg;
 	  seg.setOptimizeCoefficients(true);
-	  seg.setModelType(pcl::SACMODEL_PLANE);
+	  seg.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
 	  seg.setMethodType(pcl::SAC_RANSAC);
+		seg.setAxis(Eigen::Vector3f(0,0,1));
+		seg.setEpsAngle (20);
 	  //Iteration count
-	  seg.setMaxIterations(500);
+	  seg.setMaxIterations(1000);
 	  seg.setDistanceThreshold(0.01);
 
 	  //Plane Extract
@@ -187,6 +195,11 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 
 	// Publish the data.
 	pub.publish (output);
+
+	//get finish time
+	gettimeofday(&f, NULL);
+	ROS_INFO_STREAM( "is SACSegmentation" << sacSegmentFlag );
+	ROS_INFO_STREAM( "Compute time:" << (f.tv_sec - s.tv_sec) * 1000 + (f.tv_usec - s.tv_usec) / 1000 << "ms" );
 }
 
 
@@ -197,7 +210,7 @@ int main (int argc, char** argv)
   ros::NodeHandle nh;
 
   // Create a ROS subscriber for the input point cloud
-  ros::Subscriber sub = nh.subscribe ("input", 1, cloud_cb);
+  ros::Subscriber sub = nh.subscribe ("input", 0, cloud_cb);
 
   // Create a ROS publisher for the output point cloud
   pub = nh.advertise<sensor_msgs::PointCloud2> ("output", 1);
