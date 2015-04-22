@@ -108,14 +108,14 @@ include_directories(
 # )
 
 ## Declare a cpp executable
-add_executable(pcl_explore_human src/pcl_explore_human.cpp)
+add_executable(pcl_detect_humansize_cloud src/pcl_detect_humansize_cloud.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(pcl_explore_human_node 495_pcl_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(pcl_explore_human ${catkin_LIBRARIES})
+target_link_libraries(pcl_detect_humansize_cloud ${catkin_LIBRARIES})
 #############
 ## Install ##
 #############
