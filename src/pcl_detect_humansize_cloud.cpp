@@ -211,7 +211,7 @@ int main (int argc, char** argv)
 	ros::Subscriber sub = nh.subscribe ("input", 0, cloud_cb);
 
 	// Create a ROS publisher for the output point cloud
-	pub = nh.advertise<sensor_msgs::PointCloud2> ("output", 1);
+	pub = nh.advertise<sensor_msgs::PointCloud2> ("output_humansize_cloud", 1);
 
 	// Spin
 	ros::spin ();
