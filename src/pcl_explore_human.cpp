@@ -26,18 +26,16 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 {
 	// Create a container for the data.
 	sensor_msgs::PointCloud2 output;
-	pcl::IndicesClustersPtr clusters (new pcl::IndicesClusters), small_clusters (new pcl::IndicesClusters), large_clusters (new pcl::IndicesClusters);
+	pcl::IndicesClustersPtr clusters (new pcl::IndicesClusters);
 	pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
 	pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
-	pcl::search::KdTree<pcl::PointXYZI>::Ptr search_tree (new pcl::search::KdTree<pcl::PointXYZI>);
 	pcl::search::KdTree<pcl::PointXYZI>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZI>);
 	pcl::PointCloud<pcl::PointXYZI>::Ptr conv_input(new pcl::PointCloud<pcl::PointXYZI>());
 	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_boxel(new pcl::PointCloud<pcl::PointXYZI>());
 	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_outlier_filtered(new pcl::PointCloud<pcl::PointXYZI>());
-	pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud_with_normals(new pcl::PointCloud<pcl::PointXYZINormal>());
 
 	/*--- for debug ---*/
-	bool sacSegmentFlag = true;
+	bool sacSegmentFlag = false;
 	struct timeval s, f;
 	//Get start time
 	gettimeofday(&s, NULL);
@@ -187,8 +185,8 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		}
 	}
 
-	//pcl::toROSMsg(*cloud_all_filtered, output);
-	pcl::toROSMsg(*cloud_boxel, output);
+	pcl::toROSMsg(*cloud_all_filtered, output);
+	//pcl::toROSMsg(*cloud_boxel, output);
 
 	//add header to output cloud.
 	output.header = input -> header;
