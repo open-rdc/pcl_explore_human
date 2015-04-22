@@ -1,0 +1,4 @@
+<launch>
+  <node name="pcl_detect_humansize_cloud" pkg="pcl_explore_human" type="pcl_detect_humansize_cloud"></node>
+  <node name="pcl_extraction_shot_description" pkg="pcl_explore_human" type="pcl_extraction_shot_description"></node>
+</launch>
