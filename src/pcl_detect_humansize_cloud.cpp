@@ -44,26 +44,17 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	input->fields[3].name = "intensity";
 	pcl::fromROSMsg(*input, *conv_input);
 
-	gettimeofday(&f, NULL);
-	ROS_INFO_STREAM( "Compute time:" << (f.tv_sec - s.tv_sec) * 1000 + (f.tv_usec - s.tv_usec) / 1000 << "ms" );
-	
 	pcl::VoxelGrid<pcl::PointXYZI> vg;
 	vg.setInputCloud(conv_input);
-	vg.setLeafSize(0.005,0.005,0.005);
+	vg.setLeafSize(0.05,0.05,0.05);
 	vg.setDownsampleAllData(true);
 	vg.filter(*cloud_boxel);
-
-	gettimeofday(&f, NULL);
-	ROS_INFO_STREAM( "Compute time:" << (f.tv_sec - s.tv_sec) * 1000 + (f.tv_usec - s.tv_usec) / 1000 << "ms" );
 
 	pcl::StatisticalOutlierRemoval<pcl::PointXYZI> sor;
 	sor.setInputCloud(cloud_boxel);
 	sor.setMeanK(10);
 	sor.setStddevMulThresh(0.25);
 	sor.filter(*cloud_boxel);
-
-	gettimeofday(&f, NULL);
-	ROS_INFO_STREAM( "Compute time:" << (f.tv_sec - s.tv_sec) * 1000 + (f.tv_usec - s.tv_usec) / 1000 << "ms" );
 
 	if(!sacSegmentFlag){
 		pcl::PassThrough<pcl::PointXYZI> pass;
@@ -136,16 +127,6 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 				break;
 			}
 		}
-		// for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++){
-		// 	if(is_highIntensity){
-		// 		cloud_all_filtered->points.push_back(cloud_boxel->points[*pit]);
-		// 	}
-		// 	/*---for Debug intensity set---*/
-		// 	else{
-		// 		cloud_boxel -> points[*pit].intensity = ( 15000 / size ) * now_cluster;
-		// 	}
-		// 	/*-----------------------------*/
-		// }
 		if(is_highIntensity){
 			for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
 			{
