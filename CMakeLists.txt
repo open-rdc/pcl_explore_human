@@ -13,7 +13,10 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   pcl_conversions
   pcl_msgs
+  cmake_modules
 )
+find_package(Eigen REQUIRED)
+add_definitions(${EIGEN_DEFINITIONS})
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -100,6 +103,7 @@ catkin_package(
 # include_directories(include)
 include_directories(
   ${catkin_INCLUDE_DIRS}
+  ${Eigen_INCLUDE_DIRS}
 )
 
 ## Declare a cpp library
@@ -110,6 +114,7 @@ include_directories(
 ## Declare a cpp executable
 add_executable(pcl_detect_humansize_cloud src/pcl_detect_humansize_cloud.cpp)
 add_executable(pcl_extraction_shot_description src/pcl_extraction_shot_description.cpp)
+add_executable(pcl_extraction_human_description src/pcl_extraction_human_description.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -118,6 +123,7 @@ add_executable(pcl_extraction_shot_description src/pcl_extraction_shot_descripti
 ## Specify libraries to link a library or executable target against
 target_link_libraries(pcl_detect_humansize_cloud ${catkin_LIBRARIES})
 target_link_libraries(pcl_extraction_shot_description ${catkin_LIBRARIES})
+target_link_libraries(pcl_extraction_human_description ${catkin_LIBRARIES})
 #############
 ## Install ##
 #############
