@@ -35,6 +35,10 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	int cloud_size = conv_input->points.size();
 	std::cout << "cloud_size: " << cloud_size << std::endl;
 
+	if( cloud_size <= 1 ){
+		return;
+	}
+
 	// K nearest neighbor search
 	pcl::KdTreeFLANN<pcl::PointXYZI> kdtree;
 	kdtree.setInputCloud(conv_input);
@@ -50,8 +54,29 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 
 	if( kdtree.nearestKSearch( searchPoint, k, pointIdxNKNSearch, pointNKNSquiaredDistance) > 0 ){
 		nearest_point_distance = *min_element( pointNKNSquiaredDistance.begin(),  pointNKNSquiaredDistance.end() );
-		std::cout << "min_distance: " << nearest_point_distance << std::endl;
+		std::cout << "estimate min_distance: " << nearest_point_distance << std::endl;
 	}
+
+	float min_distance,min_distance_tmp;
+	min_distance = sqrt(
+		powf( conv_input->points[0].x - searchPoint.x, 2.0f ) +
+		powf( conv_input->points[0].y - searchPoint.y, 2.0f ) +
+		powf( conv_input->points[0].z - searchPoint.z, 2.0f )
+	);
+
+	//brute force nearest neighbor search
+	for(int j=1; j<conv_input->size(); j++){
+		min_distance_tmp = sqrt(
+			powf( conv_input->points[0].x - searchPoint.x, 2.0f ) +
+			powf( conv_input->points[0].y - searchPoint.y, 2.0f ) +
+			powf( conv_input->points[0].z - searchPoint.z, 2.0f )
+		);
+		if( min_distance < min_distance_tmp){
+			min_distance = min_distance_tmp;
+		}
+	}
+
+	std::cout << "min_distance: " << min_distance << std::endl;
 
 	// Calculate center of mass of humansize cloud
 	Vector4f center_of_mass;
@@ -77,7 +102,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		//Calculate three dimentional moment of inertia matrix
 		moment_of_inertia_matrix_tmp << 
 		powf(point_tmp[1],2.0f)+powf(point_tmp[2],2.0f),	-point_tmp[0]*point_tmp[1],							-point_tmp[0]*point_tmp[2],
-		-point_tmp[0]*point_tmp[1],							powf(point_tmp[1],2.0f)+powf(point_tmp[2],2.0f),	-point_tmp[1]*point_tmp[2],
+		-point_tmp[0]*point_tmp[1],							powf(point_tmp[0],2.0f)+powf(point_tmp[2],2.0f),	-point_tmp[1]*point_tmp[2],
 		-point_tmp[0]*point_tmp[2],							-point_tmp[1]*point_tmp[2],							powf(point_tmp[0],2.0f)+powf(point_tmp[1],2.0f);
 
 		moment_of_inertia_matrix = moment_of_inertia_matrix + moment_of_inertia_matrix_tmp;
@@ -104,9 +129,6 @@ int main (int argc, char** argv)
 
 	// Create a ROS subscriber for the input point cloud
 	ros::Subscriber sub = nh.subscribe ("output_humansize_cloud", 0, cloud_cb);
-
-	// Create a ROS publisher for the output point cloud
-	//pub = nh.advertise<sensor_msgs::PointCloud2> ("output_humansize_cloud", 1);
 
 	// Spin
 	ros::spin ();
