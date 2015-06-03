@@ -7,6 +7,7 @@
 #include <pcl/common/common.h>
 #include <pcl/common/centroid.h>
 #include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/filters/passthrough.h>
 #include <pcl/PCLPointCloud2.h>
 
 #include <Eigen/Core>
@@ -65,11 +66,11 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	);
 
 	//brute force nearest neighbor search
-	for(int j=1; j<conv_input->size(); j++){
+	for(int i=1; i<conv_input->size(); i++){
 		min_distance_tmp = sqrt(
-			powf( conv_input->points[0].x - searchPoint.x, 2.0f ) +
-			powf( conv_input->points[0].y - searchPoint.y, 2.0f ) +
-			powf( conv_input->points[0].z - searchPoint.z, 2.0f )
+			powf( conv_input->points[i].x - searchPoint.x, 2.0f ) +
+			powf( conv_input->points[i].y - searchPoint.y, 2.0f ) +
+			powf( conv_input->points[i].z - searchPoint.z, 2.0f )
 		);
 		if( min_distance < min_distance_tmp){
 			min_distance = min_distance_tmp;
@@ -77,6 +78,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	}
 
 	std::cout << "min_distance: " << min_distance << std::endl;
+	std::cout << std::endl;
 
 	// Calculate center of mass of humansize cloud
 	Vector4f center_of_mass;
@@ -88,14 +90,17 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	Vector3f point_tmp;
 	Vector3f point_from_center_of_mass;
 
+	// intensity buffer
+	double intensity_sum=0, intensity_ave=0, intensity_pow_sum=0, intensity_std_dev=0;
+	std::vector<double> intensity_histgram(270);
 
-	for(int j=0; j<conv_input->size(); j++){
-		point_tmp << conv_input->points[j].x, conv_input->points[j].y, conv_input->points[j].z;
+	for(int i=0; i<cloud_size; i++){
+		point_tmp << conv_input->points[i].x, conv_input->points[i].y, conv_input->points[i].z;
 		//Calculate three dimentional convariance matrix
 		point_from_center_of_mass <<
-		 center_of_mass[0] - point_tmp[0],
-		 center_of_mass[1] - point_tmp[1],
-		 center_of_mass[2] - point_tmp[2];
+		center_of_mass[1] - point_tmp[1],
+		center_of_mass[0] - point_tmp[0],
+		center_of_mass[2] - point_tmp[2];
 
 		convariance_matrix_tmp += point_tmp * point_tmp.transpose();
 
@@ -106,16 +111,74 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		-point_tmp[0]*point_tmp[2],							-point_tmp[1]*point_tmp[2],							powf(point_tmp[0],2.0f)+powf(point_tmp[1],2.0f);
 
 		moment_of_inertia_matrix = moment_of_inertia_matrix + moment_of_inertia_matrix_tmp;
+
+		// Calculate intensity distribution
+		intensity_sum += conv_input->points[i].intensity;
+		intensity_pow_sum += powf(conv_input->points[i].intensity,2);
+		intensity_histgram[conv_input->points[i].intensity / (pow(2,18) / intensity_histgram.size() )] += 1;
 	}
-	convariance_matrix = (1.0f/conv_input->points.size()) * convariance_matrix_tmp.array();
-	
-	for(int j=0;j<convariance_matrix.rows()*convariance_matrix.cols();j++){
-		std::cout << convariance_matrix(j) << " ";
+	//Calculate Convariance matrix 
+	convariance_matrix = (1.0f/cloud_size) * convariance_matrix_tmp.array();	
+
+	// Calculate intensity distribution
+	intensity_ave = intensity_sum / cloud_size;
+	std::cout << "intensity_ave: " << intensity_ave << std::endl;
+	intensity_std_dev = sqrt(fabs(intensity_pow_sum / cloud_size - powf(intensity_ave,2)));
+	std::cout << "intensity_std_dev: " << intensity_std_dev <<std::endl;
+	std::cout << "intensity_histgram: ";
+	for(int i=0; i<intensity_histgram.size(); i++){
+		intensity_histgram[i] = intensity_histgram[i] / cloud_size;
+		std::cout << intensity_histgram[i] << " ";
+	}
+	std::cout << std::endl;
+	std::cout << std::endl;
+
+	std::cout << "3D convariance matrix:" << std::endl;
+	for(int i=0;i<convariance_matrix.rows()*convariance_matrix.cols();i++){
+		std::cout << convariance_matrix(i) << " ";
+		if(!((i+1)%3)){
+			std::cout << std::endl;
+		}
 	}
 	std::cout << std::endl;
 
-	for(int j=0;j<moment_of_inertia_matrix.rows()*moment_of_inertia_matrix.cols();j++){
-		std::cout << moment_of_inertia_matrix(j) << " ";
+	std::cout << "moment of inertia:" << std::endl;
+	for(int i=0;i<moment_of_inertia_matrix.rows()*moment_of_inertia_matrix.cols();i++){
+		std::cout << moment_of_inertia_matrix(i) << " ";
+		if(!((i+1)%3)){
+			std::cout << std::endl;
+		}
+	}
+	std::cout << std::endl;
+
+	//Calculate Slice distribution
+	pcl::PointXYZI min_pt,max_pt,sliced_min_pt,sliced_max_pt;
+	pcl::getMinMax3D(*conv_input, min_pt, max_pt);
+	int sectors = 10;
+	double sector_height = (max_pt.z - min_pt.z)/sectors;
+
+	pcl::PassThrough<pcl::PointXYZI> pass;
+	std::vector<std::vector<double> > slice_dist(sectors,std::vector<double> (2));
+	
+	for(double sec_h = min_pt.z,i = 0; sec_h < max_pt.z - sector_height; sec_h += sector_height, i++){
+		pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_sliced(new pcl::PointCloud<pcl::PointXYZI>());
+		pass.setInputCloud(conv_input);
+		pass.setFilterFieldName("z");
+		pass.setFilterLimits(sec_h, sec_h + sector_height);
+		pass.filter(*cloud_sliced);
+
+		pcl::getMinMax3D(*cloud_sliced,sliced_min_pt,sliced_max_pt);
+
+		slice_dist[i][0] = sliced_max_pt.x - sliced_min_pt.x;
+		slice_dist[i][1] = sliced_max_pt.y - sliced_min_pt.y;
+	}
+
+	std::cout << "slice distribution:" << std::endl;
+	for(int i=0;i<2;i++){
+		for(int j=0;j<10;j++){
+			std::cout << slice_dist[j][i] << " ";
+		}
+		std::cout << std::endl;
 	}
 	std::cout << std::endl;
 }
