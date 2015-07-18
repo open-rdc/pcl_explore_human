@@ -3,6 +3,7 @@
 // PCL specific includes
 #include <sensor_msgs/PointCloud2.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl/io/pcd_io.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/segmentation/conditional_euclidean_clustering.h>
@@ -122,7 +123,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		//High intensity judge
 		for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
 		{
-			if( cloud_boxel -> points[*pit].intensity > 15000){
+			if( cloud_boxel -> points[*pit].intensity > 0){
 				is_highIntensity = true;
 				break;
 			}
@@ -159,6 +160,9 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		}
 		if( is_highIntensity ){
 			std::cout<<"HighIntensity"<<std::endl;
+
+			std::string file_path = "/home/kazuya/pcd/";
+			int file_cnt = 0;
 			float width,depth,height;
 			width = fabs(max_pt.x - min_pt.x);
 			depth = fabs(max_pt.y - min_pt.y);
@@ -166,6 +170,19 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 			std::cout << "size:" << width << "," << depth << "," << height << "," << std::endl;
 			if( ((width < 1.0) && (width > 0.5)) && ((depth < 1.0) && (depth > 0.4)) && ((height < 1.8) && (height > 1.0)) ){
 				std::cout << "Find Target" << std::endl;
+
+				//Save process
+				cloud_all_filtered -> width = 1;
+				cloud_all_filtered -> height = cloud_all_filtered -> points.size();
+				std::stringstream file_name_st;
+				std::string file_name;
+				file_name_st << input->header.stamp;
+				file_name.append(file_path);
+				file_name.append(file_name_st.str());
+				file_name.append(".pcd");
+				std::cout << file_name <<std::endl;
+				pcl::io::savePCDFileASCII(file_name, *cloud_all_filtered);
+				file_cnt++;
 			}
 			else{
 				//if cloud is not target, leaving only one point to erase all.
@@ -197,7 +214,7 @@ int main (int argc, char** argv)
 	ros::NodeHandle nh;
 
 	// Create a ROS subscriber for the input point cloud
-	ros::Subscriber sub = nh.subscribe ("input", 0, cloud_cb);
+	ros::Subscriber sub = nh.subscribe ("hokuyo3d/hokuyo_cloud2", 0, cloud_cb);
 
 	// Create a ROS publisher for the output point cloud
 	pub = nh.advertise<sensor_msgs::PointCloud2> ("output_humansize_cloud", 1);
