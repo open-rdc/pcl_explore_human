@@ -1,7 +1,10 @@
-
+// ROS specific includes
 #include <ros/ros.h>
-// PCL specific includes
 #include <sensor_msgs/PointCloud2.h>
+#include <tf/transform_listener.h>
+#include <pcl_ros/point_cloud.h>
+#include <pcl_ros/transforms.h>
+// PCL specific includes
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_cloud.h>
@@ -26,6 +29,7 @@ ros::Publisher pub;
 void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 {
 	// Create a container for the data.
+	sensor_msgs::PointCloud2 transformed_cloud;
 	sensor_msgs::PointCloud2 output;
 	pcl::IndicesClustersPtr clusters (new pcl::IndicesClusters);
 	pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
@@ -41,9 +45,15 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	//Get start time
 	gettimeofday(&s, NULL);
 	/*---           ---*/
+	
+	// Transform pointcloud from LIDAR fixed link to base_link
+	std::string target_link_name = "base_link";
+	tf::TransformListener tflistener;
+	pcl_ros::transformPointCloud(target_link_name, *input, transformed_cloud, tflistener);
+
 	//Conversion PointCloud2 intensity field name to PointXYZI intensity field name.
-	input->fields[3].name = "intensity";
-	pcl::fromROSMsg(*input, *conv_input);
+	transformed_cloud.fields[3].name = "intensity";
+	pcl::fromROSMsg(transformed_cloud, *conv_input);
 
 	pcl::VoxelGrid<pcl::PointXYZI> vg;
 	vg.setInputCloud(conv_input);
