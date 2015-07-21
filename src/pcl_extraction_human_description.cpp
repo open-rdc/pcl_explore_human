@@ -23,6 +23,8 @@
 
 using namespace Eigen;
 
+int g_max_inten = 0;
+
 void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 {
 	// Create a container for the data.
@@ -91,8 +93,8 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	Vector3f point_from_center_of_mass;
 
 	// intensity buffer
-	double intensity_sum=0, intensity_ave=0, intensity_pow_sum=0, intensity_std_dev=0;
-	std::vector<double> intensity_histgram(270);
+	double intensity_sum=0, intensity_ave=0, intensity_pow_sum=0, intensity_std_dev=0, max_intensity = 5000;
+	std::vector<double> intensity_histgram(25);
 
 	for(int i=0; i<cloud_size; i++){
 		point_tmp << conv_input->points[i].x, conv_input->points[i].y, conv_input->points[i].z;
@@ -115,13 +117,17 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		// Calculate intensity distribution
 		intensity_sum += conv_input->points[i].intensity;
 		intensity_pow_sum += powf(conv_input->points[i].intensity,2);
-		intensity_histgram[conv_input->points[i].intensity / (pow(2,18) / intensity_histgram.size() )] += 1;
+		intensity_histgram[conv_input->points[i].intensity / (max_intensity / intensity_histgram.size())] += 1;
+		if( g_max_inten < conv_input->points[i].intensity ){
+			g_max_inten = conv_input->points[i].intensity;
+		}
 	}
 	//Calculate Convariance matrix 
 	convariance_matrix = (1.0f/cloud_size) * convariance_matrix_tmp.array();	
 
 	// Calculate intensity distribution
 	intensity_ave = intensity_sum / cloud_size;
+	std::cout << "max_intensity: " << g_max_inten << std::endl;
 	std::cout << "intensity_ave: " << intensity_ave << std::endl;
 	intensity_std_dev = sqrt(fabs(intensity_pow_sum / cloud_size - powf(intensity_ave,2)));
 	std::cout << "intensity_std_dev: " << intensity_std_dev <<std::endl;
