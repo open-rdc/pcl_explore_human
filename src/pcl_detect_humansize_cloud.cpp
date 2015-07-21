@@ -25,6 +25,9 @@
 #include <sys/time.h>
 
 ros::Publisher pub;
+tf::TransformListener *tf_listener;
+
+int g_inten = 0;
 
 void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 {
@@ -41,16 +44,25 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 
 	/*--- for debug ---*/
 	bool sacSegmentFlag = false;
+	bool isSave = true;
 	struct timeval s, f;
 	//Get start time
 	gettimeofday(&s, NULL);
 	/*---           ---*/
 	
 	// Transform pointcloud from LIDAR fixed link to base_link
-	std::string target_link_name = "base_link";
-	tf::TransformListener tflistener;
-	pcl_ros::transformPointCloud(target_link_name, *input, transformed_cloud, tflistener);
-
+	std::string target_link_name = "/base_link";
+	tf::StampedTransform transform;
+	try{
+		tf_listener->waitForTransform(target_link_name, input->header.frame_id, ros::Time(), ros::Duration(100.0));
+	}catch(tf::TransformException ex){
+		ROS_ERROR("%s",ex.what());
+	}
+	
+	if(!pcl_ros::transformPointCloud(target_link_name, *input, 	transformed_cloud, *tf_listener)){
+		return;
+	}
+	
 	//Conversion PointCloud2 intensity field name to PointXYZI intensity field name.
 	transformed_cloud.fields[3].name = "intensity";
 	pcl::fromROSMsg(transformed_cloud, *conv_input);
@@ -72,7 +84,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		pass.setFilterLimitsNegative (true);
 		pass.setInputCloud(cloud_boxel);
 		pass.setFilterFieldName("z");
-		pass.setFilterLimits(0.0,0.2);
+		pass.setFilterLimits(-1.0,0.1);
 		pass.filter(*cloud_boxel);
 	}
 	else{
@@ -108,7 +120,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	tree->setInputCloud( cloud_boxel );
 	std::vector<pcl::PointIndices> cluster_indices;
 	pcl::EuclideanClusterExtraction<pcl::PointXYZI> ec;
-	ec.setClusterTolerance(0.07);
+	ec.setClusterTolerance(0.1);
 	ec.setMinClusterSize(100);
 	ec.setMaxClusterSize(100000);
 	ec.setSearchMethod(tree);
@@ -133,7 +145,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		//High intensity judge
 		for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
 		{
-			if( cloud_boxel -> points[*pit].intensity > 0){
+			if( cloud_boxel -> points[*pit].intensity > 1500 ){
 				is_highIntensity = true;
 				break;
 			}
@@ -184,15 +196,18 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 				//Save process
 				cloud_all_filtered -> width = 1;
 				cloud_all_filtered -> height = cloud_all_filtered -> points.size();
-				std::stringstream file_name_st;
-				std::string file_name;
-				file_name_st << input->header.stamp;
-				file_name.append(file_path);
-				file_name.append(file_name_st.str());
-				file_name.append(".pcd");
-				std::cout << file_name <<std::endl;
-				pcl::io::savePCDFileASCII(file_name, *cloud_all_filtered);
-				file_cnt++;
+
+				if(isSave){
+					std::stringstream file_name_st;
+					std::string file_name;
+					file_name_st << input->header.stamp;
+					file_name.append(file_path);
+					file_name.append(file_name_st.str());
+					file_name.append(".pcd");
+					std::cout << file_name <<std::endl;
+					pcl::io::savePCDFileASCII(file_name, *cloud_all_filtered);
+					file_cnt++;
+				}
 			}
 			else{
 				//if cloud is not target, leaving only one point to erase all.
@@ -206,6 +221,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 
 	//add header to output cloud.
 	output.header = input -> header;
+	output.header.frame_id = "base_link";
 
 	// Publish the data.
 	pub.publish (output);
@@ -222,6 +238,8 @@ int main (int argc, char** argv)
 	// Initialize ROS
 	ros::init (argc, argv, "pcl_node");
 	ros::NodeHandle nh;
+
+	tf_listener = new tf::TransformListener();
 
 	// Create a ROS subscriber for the input point cloud
 	ros::Subscriber sub = nh.subscribe ("hokuyo3d/hokuyo_cloud2", 0, cloud_cb);
