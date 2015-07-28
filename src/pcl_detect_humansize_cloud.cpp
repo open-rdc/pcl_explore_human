@@ -27,8 +27,6 @@
 ros::Publisher pub;
 tf::TransformListener *tf_listener;
 
-int g_inten = 0;
-
 void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 {
 	// Create a container for the data.
@@ -120,7 +118,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	tree->setInputCloud( cloud_boxel );
 	std::vector<pcl::PointIndices> cluster_indices;
 	pcl::EuclideanClusterExtraction<pcl::PointXYZI> ec;
-	ec.setClusterTolerance(0.1);
+	ec.setClusterTolerance(1.0);
 	ec.setMinClusterSize(100);
 	ec.setMaxClusterSize(100000);
 	ec.setSearchMethod(tree);
@@ -190,7 +188,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 			depth = fabs(max_pt.y - min_pt.y);
 			height = fabs(max_pt.z - min_pt.z);
 			std::cout << "size:" << width << "," << depth << "," << height << "," << std::endl;
-			if( ((width < 1.0) && (width > 0.5)) && ((depth < 1.0) && (depth > 0.4)) && ((height < 1.8) && (height > 1.0)) ){
+			if( ((width < 1.2) && (width > 0.4)) && ((depth < 1.2) && (depth > 0.4)) && ((height < 2.0) && (height > 1.0)) ){
 				std::cout << "Find Target" << std::endl;
 
 				//Save process
@@ -216,15 +214,17 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		}
 	}
 
-	pcl::toROSMsg(*cloud_all_filtered, output);
-	// pcl::toROSMsg(*cloud_boxel, output);
+	if( cloud_all_filtered->points.size() > 1 ){
+		pcl::toROSMsg(*cloud_all_filtered, output);
+		// pcl::toROSMsg(*cloud_boxel, output);
 
-	//add header to output cloud.
-	output.header = input -> header;
-	output.header.frame_id = "base_link";
+		//add header to output cloud.
+		output.header = input -> header;
+		output.header.frame_id = "base_link";
 
-	// Publish the data.
-	pub.publish (output);
+		// Publish the data.
+		pub.publish (output);
+	}
 
 	//get finish time
 	ROS_INFO_STREAM( "is SACSegmentation" << sacSegmentFlag );

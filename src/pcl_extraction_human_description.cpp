@@ -6,9 +6,12 @@
 #include <pcl/point_types.h>
 #include <pcl/common/common.h>
 #include <pcl/common/centroid.h>
+#include <pcl/common/pca.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/PCLPointCloud2.h>
+
+#include <pcl_ros/point_cloud.h>
 
 #include <Eigen/Core>
 #include <Eigen/Dense>
@@ -23,12 +26,12 @@
 
 using namespace Eigen;
 
+ros::Publisher pub;
 int g_max_inten = 0;
 
 void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 {
 	// Create a container for the data.
-	sensor_msgs::PointCloud2 output;
 	pcl::PointCloud<pcl::PointXYZI>::Ptr conv_input(new pcl::PointCloud<pcl::PointXYZI>());
 	
 	input->fields[3].name = "intensity";
@@ -41,6 +44,41 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	if( cloud_size <= 1 ){
 		return;
 	}
+
+	pcl::PCA<pcl::PointXYZI> pca;
+	pcl::PointCloud<pcl::PointXYZI>::Ptr translate_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+	sensor_msgs::PointCloud2 output;
+	Eigen::Vector3f eigen_values;
+	Eigen::Vector4f centroid;
+	Eigen::Matrix3f eigen_vectors;
+	Eigen::Affine3f transform = Eigen::Affine3f::Identity();
+	double theta;
+
+	//PCA
+	pca.setInputCloud(conv_input);
+	centroid = pca.getMean();
+	std::cout << "Centroid of pointcloud: " << centroid[0] << ", " << centroid[1] << ", " << centroid[2] << std::endl;
+	eigen_values = pca.getEigenValues();
+	std::cout << "Eigen values of PCAed pointcloud: " << eigen_values[0] << ", "  << eigen_values[1] << ", " << eigen_values[2] << std::endl;
+	eigen_vectors << pca.getEigenVectors();
+	std::cout << "Eigen Vectors of PCAed pointcloud:" << std::endl;
+	for(int i=0;i<eigen_vectors.rows()*eigen_vectors.cols();i++){
+		std::cout << eigen_vectors(i) << " ";
+		if(!((i+1)%3)){
+			std::cout << std::endl;
+		}
+	}
+	std::cout << std::endl;
+
+	//Rotation cloud from PCA data
+	theta = atan2(eigen_vectors(1,0), eigen_vectors(0,0)-0.5*M_PI);
+	transform.rotate(Eigen::AngleAxisf(theta, Eigen::Vector3f::UnitZ()));
+	pcl::transformPointCloud(*conv_input, *translate_cloud, transform);
+
+	pcl::toROSMsg(*translate_cloud, output);
+	output.header = input -> header;
+
+	pub.publish(output);
 
 	// K nearest neighbor search
 	pcl::KdTreeFLANN<pcl::PointXYZI> kdtree;
@@ -198,6 +236,8 @@ int main (int argc, char** argv)
 
 	// Create a ROS subscriber for the input point cloud
 	ros::Subscriber sub = nh.subscribe ("output_humansize_cloud", 0, cloud_cb);
+
+	pub = nh.advertise<sensor_msgs::PointCloud2>("translate_humansize_cloud", 1);
 
 	// Spin
 	ros::spin ();
