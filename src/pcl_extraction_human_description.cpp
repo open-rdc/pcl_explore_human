@@ -46,12 +46,14 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	}
 
 	pcl::PCA<pcl::PointXYZI> pca;
-	pcl::PointCloud<pcl::PointXYZI>::Ptr translate_cloud(new pcl::PointCloud<pcl::PointXYZI>());
+	pcl::PointCloud<pcl::PointXYZI>::Ptr transform_cloud_translate(new pcl::PointCloud<pcl::PointXYZI>());
+	pcl::PointCloud<pcl::PointXYZI>::Ptr transform_cloud_rotate(new pcl::PointCloud<pcl::PointXYZI>());
 	sensor_msgs::PointCloud2 output;
 	Eigen::Vector3f eigen_values;
 	Eigen::Vector4f centroid;
 	Eigen::Matrix3f eigen_vectors;
-	Eigen::Affine3f transform = Eigen::Affine3f::Identity();
+	Eigen::Affine3f translate = Eigen::Affine3f::Identity();
+	Eigen::Affine3f rotate = Eigen::Affine3f::Identity();
 	double theta;
 
 	//PCA
@@ -72,11 +74,16 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 
 	//Rotation cloud from PCA data
 	theta = atan2(eigen_vectors(1,0), eigen_vectors(0,0)-0.5*M_PI);
-	transform.rotate(Eigen::AngleAxisf(theta, Eigen::Vector3f::UnitZ()));
-	pcl::transformPointCloud(*conv_input, *translate_cloud, transform);
+	std::cout << "Theta: " << theta << std::endl;
+	translate.translation() << -centroid[0], -centroid[1], -centroid[2];
+	pcl::transformPointCloud(*conv_input, *transform_cloud_translate, translate);
 
-	pcl::toROSMsg(*translate_cloud, output);
+	rotate.rotate(Eigen::AngleAxisf(-theta, Eigen::Vector3f::UnitZ()));
+	pcl::transformPointCloud(*transform_cloud_translate, *transform_cloud_rotate, rotate);
+
+	pcl::toROSMsg(*transform_cloud_rotate, output);
 	output.header = input -> header;
+	output.header.frame_id = "map";
 
 	pub.publish(output);
 
@@ -122,7 +129,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 
 	// Calculate center of mass of humansize cloud
 	Vector4f center_of_mass;
-	pcl::compute3DCentroid(*conv_input, center_of_mass);
+	pcl::compute3DCentroid(*transform_cloud_rotate, center_of_mass);
 	MatrixXf convariance_matrix = MatrixXf::Zero(3,3);
 	MatrixXf convariance_matrix_tmp = MatrixXf::Zero(3,3);
 	MatrixXf moment_of_inertia_matrix_tmp = MatrixXf::Zero(3,3);
@@ -135,7 +142,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	std::vector<double> intensity_histgram(25);
 
 	for(int i=0; i<cloud_size; i++){
-		point_tmp << conv_input->points[i].x, conv_input->points[i].y, conv_input->points[i].z;
+		point_tmp << transform_cloud_rotate->points[i].x, transform_cloud_rotate->points[i].y, transform_cloud_rotate->points[i].z;
 		//Calculate three dimentional convariance matrix
 		point_from_center_of_mass <<
 		center_of_mass[1] - point_tmp[1],
@@ -153,11 +160,11 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		moment_of_inertia_matrix = moment_of_inertia_matrix + moment_of_inertia_matrix_tmp;
 
 		// Calculate intensity distribution
-		intensity_sum += conv_input->points[i].intensity;
-		intensity_pow_sum += powf(conv_input->points[i].intensity,2);
-		intensity_histgram[conv_input->points[i].intensity / (max_intensity / intensity_histgram.size())] += 1;
-		if( g_max_inten < conv_input->points[i].intensity ){
-			g_max_inten = conv_input->points[i].intensity;
+		intensity_sum += transform_cloud_rotate->points[i].intensity;
+		intensity_pow_sum += powf(transform_cloud_rotate->points[i].intensity,2);
+		intensity_histgram[transform_cloud_rotate->points[i].intensity / (max_intensity / intensity_histgram.size())] += 1;
+		if( g_max_inten < transform_cloud_rotate->points[i].intensity ){
+			g_max_inten = transform_cloud_rotate->points[i].intensity;
 		}
 	}
 	//Calculate Convariance matrix 
@@ -197,7 +204,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 
 	//Calculate Slice distribution
 	pcl::PointXYZI min_pt,max_pt,sliced_min_pt,sliced_max_pt;
-	pcl::getMinMax3D(*conv_input, min_pt, max_pt);
+	pcl::getMinMax3D(*transform_cloud_rotate, min_pt, max_pt);
 	int sectors = 10;
 	double sector_height = (max_pt.z - min_pt.z)/sectors;
 
@@ -206,7 +213,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	
 	for(double sec_h = min_pt.z,i = 0; sec_h < max_pt.z - sector_height; sec_h += sector_height, i++){
 		pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_sliced(new pcl::PointCloud<pcl::PointXYZI>());
-		pass.setInputCloud(conv_input);
+		pass.setInputCloud(transform_cloud_rotate);
 		pass.setFilterFieldName("z");
 		pass.setFilterLimits(sec_h, sec_h + sector_height);
 		pass.filter(*cloud_sliced);
