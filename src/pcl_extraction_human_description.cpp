@@ -73,10 +73,11 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	std::cout << std::endl;
 
 	//Rotation cloud from PCA data
-	theta = atan2(eigen_vectors(1,0), eigen_vectors(0,0)-0.5*M_PI);
+	theta = atan2(eigen_vectors(1,0), eigen_vectors(0,0));
 	std::cout << "Theta: " << theta << std::endl;
 	translate.translation() << -centroid[0], -centroid[1], -centroid[2];
 	pcl::transformPointCloud(*conv_input, *transform_cloud_translate, translate);
+
 
 	rotate.rotate(Eigen::AngleAxisf(-theta, Eigen::Vector3f::UnitZ()));
 	pcl::transformPointCloud(*transform_cloud_translate, *transform_cloud_rotate, rotate);

@@ -1,4 +1,4 @@
-// ROS specific includes
+// +ROS specific includes
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <tf/transform_listener.h>
@@ -67,7 +67,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 
 	pcl::VoxelGrid<pcl::PointXYZI> vg;
 	vg.setInputCloud(conv_input);
-	vg.setLeafSize(0.05,0.05,0.05);
+	vg.setLeafSize(0.15,0.15,0.15);
 	vg.setDownsampleAllData(true);
 	vg.filter(*cloud_boxel);
 
@@ -76,13 +76,15 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	sor.setMeanK(10);
 	sor.setStddevMulThresh(0.25);
 	sor.filter(*cloud_boxel);
+	
+	ROS_INFO_STREAM( "is SACSegmentation" << sacSegmentFlag );
 
 	if(!sacSegmentFlag){
 		pcl::PassThrough<pcl::PointXYZI> pass;
 		pass.setFilterLimitsNegative (true);
 		pass.setInputCloud(cloud_boxel);
 		pass.setFilterFieldName("z");
-		pass.setFilterLimits(-1.0,0.1);
+		pass.setFilterLimits(-2.0,0.0);
 		pass.filter(*cloud_boxel);
 	}
 	else{
@@ -118,14 +120,13 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	tree->setInputCloud( cloud_boxel );
 	std::vector<pcl::PointIndices> cluster_indices;
 	pcl::EuclideanClusterExtraction<pcl::PointXYZI> ec;
-	ec.setClusterTolerance(1.0);
-	ec.setMinClusterSize(100);
-	ec.setMaxClusterSize(100000);
+	ec.setClusterTolerance(0.2);
+	ec.setMinClusterSize(10);
+	ec.setMaxClusterSize(1000000);
 	ec.setSearchMethod(tree);
 	ec.setInputCloud(cloud_boxel);
 	ec.extract(cluster_indices);
 	int j=0;
-	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_all_filtered(new pcl::PointCloud<pcl::PointXYZI>());
 	/*---for Debug Visualize(intensity coloring)---*/
 	int size = cluster_indices.size();
 	int color_max = 15000;
@@ -133,6 +134,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	int now_cluster;
 	for(std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin();it != cluster_indices.end (); ++it)
 	{
+		pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_all_filtered(new pcl::PointCloud<pcl::PointXYZI>());
 		//Now iterator count
 		now_cluster = it - cluster_indices.begin();
 		float min_point[3];
@@ -143,7 +145,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		//High intensity judge
 		for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
 		{
-			if( cloud_boxel -> points[*pit].intensity > 1500 ){
+			if( cloud_boxel -> points[*pit].intensity > 0 ){
 				is_highIntensity = true;
 				break;
 			}
@@ -211,23 +213,21 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 				//if cloud is not target, leaving only one point to erase all.
 				cloud_all_filtered->erase(cloud_all_filtered->begin()+1,cloud_all_filtered->end());
 			}
+			if( cloud_all_filtered->points.size() > 1 ){
+				pcl::toROSMsg(*cloud_all_filtered, output);
+				// pcl::toROSMsg(*cloud_boxel, output);
+
+				//add header to output cloud.
+				output.header = input -> header;
+				output.header.frame_id = "base_link";
+
+				// Publish the data.
+				pub.publish (output);
+			}
 		}
 	}
 
-	if( cloud_all_filtered->points.size() > 1 ){
-		pcl::toROSMsg(*cloud_all_filtered, output);
-		// pcl::toROSMsg(*cloud_boxel, output);
-
-		//add header to output cloud.
-		output.header = input -> header;
-		output.header.frame_id = "base_link";
-
-		// Publish the data.
-		pub.publish (output);
-	}
-
 	//get finish time
-	ROS_INFO_STREAM( "is SACSegmentation" << sacSegmentFlag );
 	gettimeofday(&f, NULL);
 	ROS_INFO_STREAM( "Compute time:" << (f.tv_sec - s.tv_sec) * 1000 + (f.tv_usec - s.tv_usec) / 1000 << "ms" );
 }
