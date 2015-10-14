@@ -21,6 +21,7 @@
 #include <math.h>
 
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <algorithm>
 
@@ -31,6 +32,8 @@ int g_max_inten = 0;
 
 void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 {
+	int is_save = true;
+
 	// Create a container for the data.
 	pcl::PointCloud<pcl::PointXYZI>::Ptr conv_input(new pcl::PointCloud<pcl::PointXYZI>());
 	
@@ -55,6 +58,8 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	Eigen::Affine3f translate = Eigen::Affine3f::Identity();
 	Eigen::Affine3f rotate = Eigen::Affine3f::Identity();
 	double theta;
+	std::vector<double> description;
+	description.push_back(cloud_size);
 
 	//PCA
 	pca.setInputCloud(conv_input);
@@ -78,7 +83,6 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	translate.translation() << -centroid[0], -centroid[1], -centroid[2];
 	pcl::transformPointCloud(*conv_input, *transform_cloud_translate, translate);
 
-
 	rotate.rotate(Eigen::AngleAxisf(-theta, Eigen::Vector3f::UnitZ()));
 	pcl::transformPointCloud(*transform_cloud_translate, *transform_cloud_rotate, rotate);
 
@@ -88,23 +92,10 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 
 	pub.publish(output);
 
-	// K nearest neighbor search
-	pcl::KdTreeFLANN<pcl::PointXYZI> kdtree;
-	kdtree.setInputCloud(conv_input);
-	
 	pcl::PointXYZI searchPoint;
-	searchPoint.x = 0.0; searchPoint.y = 0.0; searchPoint.z = 0.0;
-
-	int k = 10;
-	float nearest_point_distance = 0;
-
-	std::vector<int> pointIdxNKNSearch(k);
-	std::vector<float> pointNKNSquiaredDistance(k);
-
-	if( kdtree.nearestKSearch( searchPoint, k, pointIdxNKNSearch, pointNKNSquiaredDistance) > 0 ){
-		nearest_point_distance = *min_element( pointNKNSquiaredDistance.begin(),  pointNKNSquiaredDistance.end() );
-		std::cout << "estimate min_distance: " << nearest_point_distance << std::endl;
-	}
+	searchPoint.x = 0.0;
+	searchPoint.y = 0.0;
+	searchPoint.z = 0.0;
 
 	float min_distance,min_distance_tmp;
 	min_distance = sqrt(
@@ -127,6 +118,8 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 
 	std::cout << "min_distance: " << min_distance << std::endl;
 	std::cout << std::endl;
+
+	description.push_back(min_distance);
 
 	// Calculate center of mass of humansize cloud
 	Vector4f center_of_mass;
@@ -178,15 +171,22 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	intensity_std_dev = sqrt(fabs(intensity_pow_sum / cloud_size - powf(intensity_ave,2)));
 	std::cout << "intensity_std_dev: " << intensity_std_dev <<std::endl;
 	std::cout << "intensity_histgram: ";
+	description.push_back(intensity_ave);
+	description.push_back(intensity_std_dev);
+
 	for(int i=0; i<intensity_histgram.size(); i++){
 		intensity_histgram[i] = intensity_histgram[i] / cloud_size;
 		std::cout << intensity_histgram[i] << " ";
+		description.push_back(intensity_histgram[i]);
 	}
 	std::cout << std::endl;
 	std::cout << std::endl;
 
 	std::cout << "3D convariance matrix:" << std::endl;
 	for(int i=0;i<convariance_matrix.rows()*convariance_matrix.cols();i++){
+		if(i<5 || i==6){
+			description.push_back(convariance_matrix(i));
+		}
 		std::cout << convariance_matrix(i) << " ";
 		if(!((i+1)%3)){
 			std::cout << std::endl;
@@ -196,6 +196,9 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 
 	std::cout << "moment of inertia:" << std::endl;
 	for(int i=0;i<moment_of_inertia_matrix.rows()*moment_of_inertia_matrix.cols();i++){
+		if(i<5 || i==6){
+			description.push_back(convariance_matrix(i));
+		}
 		std::cout << moment_of_inertia_matrix(i) << " ";
 		if(!((i+1)%3)){
 			std::cout << std::endl;
@@ -228,11 +231,23 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	std::cout << "slice distribution:" << std::endl;
 	for(int i=0;i<2;i++){
 		for(int j=0;j<10;j++){
+			description.push_back(slice_dist[j][i]);
 			std::cout << slice_dist[j][i] << " ";
 		}
 		std::cout << std::endl;
 	}
 	std::cout << std::endl;
+
+	if(is_save){
+		std::ofstream ofs;
+		ofs.open("description.txt", std::ios::ate | std::ios::app);
+		ofs << "1 ";
+		for(int i=0;i<description.size();i++){
+			ofs << i+1 << ":" << description[i] << " ";
+		}
+		ofs << std::endl;
+		ofs.close();
+	}
 }
 
 
