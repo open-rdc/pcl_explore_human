@@ -42,7 +42,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 
 	/*--- for debug ---*/
 	bool sacSegmentFlag = false;
-	bool isSave = true;
+	bool is_save = false;
 	struct timeval s, f;
 	//Get start time
 	gettimeofday(&s, NULL);
@@ -197,7 +197,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 				cloud_all_filtered -> width = 1;
 				cloud_all_filtered -> height = cloud_all_filtered -> points.size();
 
-				if(isSave){
+				if(is_save){
 					std::stringstream file_name_st;
 					std::string file_name;
 					file_name_st << input->header.stamp;

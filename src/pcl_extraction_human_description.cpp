@@ -1,6 +1,8 @@
 #include <ros/ros.h>
 // PCL specific includes
 #include <sensor_msgs/PointCloud2.h>
+#include <geometry_msgs/PointStamped.h>
+#include <tf/transform_listener.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -43,6 +45,8 @@ const int FLT_NAN  = 0xffc00000;
 
 
 ros::Publisher pub;
+ros::Publisher pub_point;
+tf::TransformListener *listener;
 int g_max_inten = 0;
 
 void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
@@ -68,6 +72,8 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	pcl::PointCloud<pcl::PointXYZI>::Ptr transform_cloud_translate(new pcl::PointCloud<pcl::PointXYZI>());
 	pcl::PointCloud<pcl::PointXYZI>::Ptr transform_cloud_rotate(new pcl::PointCloud<pcl::PointXYZI>());
 	sensor_msgs::PointCloud2 output;
+	geometry_msgs::PointStamped::Ptr output_point(new geometry_msgs::PointStamped());
+	geometry_msgs::PointStamped output_point_;
 	Eigen::Vector3f eigen_values;
 	Eigen::Vector4f centroid;
 	Eigen::Matrix3f eigen_vectors;
@@ -322,6 +328,22 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		std::cout << std::endl;
 		predict = svm_predict(model,nodes);
 		std::cout << "Predict: " << predict << std::endl;
+
+		Vector4f center_of_mass_base;
+		pcl::compute3DCentroid(*conv_input, center_of_mass_base);
+		output_point->point.x = center_of_mass_base[0];
+		output_point->point.y = center_of_mass_base[1];
+		output_point->point.z = center_of_mass_base[2];
+		std::cout << "target_center :" << center_of_mass_base[1] << "," << center_of_mass_base[0] << "," << center_of_mass_base[2] << std::endl;
+		output_point->header.frame_id = "base_link";
+		output_point->header.stamp = input->header.stamp;
+		try{
+			listener->transformPoint("/map", *output_point, output_point_);
+		}
+		catch(tf::TransformException &e){
+			ROS_WARN_STREAM("tf::TransformException: " << e.what());
+		}
+		pub_point.publish(output_point_);
 	}
 }
 
@@ -331,10 +353,13 @@ int main (int argc, char** argv)
 	ros::init (argc, argv, "pcl_node");
 	ros::NodeHandle nh;
 
+	listener = new tf::TransformListener();
+
 	// Create a ROS subscriber for the input point cloud
 	ros::Subscriber sub = nh.subscribe ("output_humansize_cloud", 0, cloud_cb);
 
 	pub = nh.advertise<sensor_msgs::PointCloud2>("translate_humansize_cloud", 1);
+	pub_point = nh.advertise<geometry_msgs::PointStamped>("stoppoint_",1);
 
 	// Spin
 	ros::spin ();
