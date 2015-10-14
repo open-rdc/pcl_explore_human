@@ -145,7 +145,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		//High intensity judge
 		for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
 		{
-			if( cloud_boxel -> points[*pit].intensity > 0 ){
+			if( cloud_boxel -> points[*pit].intensity > 2000 ){
 				is_highIntensity = true;
 				break;
 			}

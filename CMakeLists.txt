@@ -102,7 +102,7 @@ catkin_package(
 ## Your package locations should be listed before other locations
 # include_directories(include)
 include_directories(
-  ${catkin_INCLUDE_DIRS}
+  ${catkin_INCLUDE_DIRS} include
   ${Eigen_INCLUDE_DIRS}
 )
 
@@ -114,7 +114,7 @@ include_directories(
 ## Declare a cpp executable
 add_executable(pcl_detect_humansize_cloud src/pcl_detect_humansize_cloud.cpp)
 add_executable(pcl_extraction_shot_description src/pcl_extraction_shot_description.cpp)
-add_executable(pcl_extraction_human_description src/pcl_extraction_human_description.cpp)
+add_executable(pcl_extraction_human_description src/pcl_extraction_human_description.cpp src/svm.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes

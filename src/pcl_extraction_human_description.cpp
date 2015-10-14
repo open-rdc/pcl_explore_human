@@ -25,14 +25,30 @@
 #include <vector>
 #include <algorithm>
 
+#include <pcl_explore_human/svm.h>
+
 using namespace Eigen;
+
+#define max(x,y) (((x)>(y))?(x):(y))
+
+extern "C" {
+const long long DBL_INF  = 0x7ff0000000000000;
+const long long DBL_MINF = 0xfff0000000000000;
+const long long DBL_NAN  = 0xfff8000000000000;
+
+const int FLT_INF  = 0x7f800000;
+const int FLT_MINF = 0xff800000;
+const int FLT_NAN  = 0xffc00000;
+}
+
 
 ros::Publisher pub;
 int g_max_inten = 0;
 
 void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 {
-	int is_save = true;
+	int is_save = false;
+	int is_predict = true;
 
 	// Create a container for the data.
 	pcl::PointCloud<pcl::PointXYZI>::Ptr conv_input(new pcl::PointCloud<pcl::PointXYZI>());
@@ -248,8 +264,66 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		ofs << std::endl;
 		ofs.close();
 	}
-}
 
+	if(is_predict){
+		FILE *fp_scale, *fp_model;
+		int idx,max_index;
+		std::vector<double> scale_min;
+		std::vector<double> scale_max;
+		double scale_min_tmp;
+		double scale_max_tmp;
+		double lower,upper;
+		double predict;
+		struct svm_model* model = svm_load_model(
+			"description_scaled.model");
+		struct svm_node *nodes;
+		nodes = (struct svm_node *)malloc((description.size()+1)*sizeof(struct svm_node));
+		fp_scale = fopen("150926_scaledata.scale","r");
+		if(fp_scale == NULL || model == NULL){
+			ROS_WARN_STREAM("Can't find model or scale data");
+			return;
+		}
+		if(fgetc(fp_scale) != 'x'){
+			return;
+		}
+		fscanf(fp_scale,"%lf %lf",&lower,&upper);
+		
+		ROS_INFO_STREAM("lower: " << lower << "upper: "<< upper);
+		while(fscanf(fp_scale,"%d %lf %lf\n",&idx,&scale_min_tmp,&scale_max_tmp) == 3){
+			scale_min.push_back(scale_min_tmp);
+			scale_max.push_back(scale_max_tmp);
+		}
+		std::cout << "scaled description :";
+		int index = 0;
+		for(int i=0;i<description.size();i++){
+			if(i<24 || i>28){
+				if(description[i] == DBL_INF || description[i] == DBL_MINF){
+					description[i] = 0;
+				}
+				if(description[i] < scale_min[index]){
+					nodes[index].index = i+1;
+					nodes[index].value = lower;
+				}
+				else if(description[i] > scale_max[index]){
+					nodes[index].index = i+1;
+					nodes[index].value = upper;
+				}
+				else{
+					nodes[index].index = i+1;
+					nodes[index].value = lower + (upper-lower) * 
+							(description[i]-scale_min[index])/
+							(scale_max[index]-scale_min[index]);
+				}
+				std::cout << nodes[index].index << ":" << nodes[index].value << ",";
+				index++;
+			}
+		}
+		nodes[index].index = -1;
+		std::cout << std::endl;
+		predict = svm_predict(model,nodes);
+		std::cout << "Predict: " << predict << std::endl;
+	}
+}
 
 int main (int argc, char** argv)
 {
