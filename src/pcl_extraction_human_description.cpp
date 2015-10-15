@@ -355,18 +355,19 @@ int main (int argc, char** argv)
 	// Initialize ROS
 	ros::init (argc, argv, "pcl_node");
 	ros::NodeHandle nh;
+	ros::NodeHandle private_nh("~");
 
 	listener = new tf::TransformListener();
+
+	std::string filename = "";
+	private_nh.param("model_file", model_filename, filename);
+	private_nh.param("scale_file", scale_filename, filename);
 
 	// Create a ROS subscriber for the input point cloud
 	ros::Subscriber sub = nh.subscribe ("output_humansize_cloud", 0, cloud_cb);
 
 	pub = nh.advertise<sensor_msgs::PointCloud2>("translate_humansize_cloud", 1);
 	pub_point = nh.advertise<geometry_msgs::PointStamped>("target_point",1);
-
-	std::string filename = "";
-	nh.param("model_file", model_filename, filename);
-	nh.param("scale_file", scale_filename, filename);
 
 	// Spin
 	ros::spin ();

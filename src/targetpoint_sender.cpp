@@ -44,7 +44,7 @@ TargetPointSender::TargetPointSender() :
 	rate_(10),is_stop_(false)
 {
 	ros::NodeHandle private_nh("~");
-	
+
 	private_nh.param("robot_frame", robot_frame_, std::string("/base_link"));
 	private_nh.param("world_frame", world_frame_, std::string("/map"));
 
@@ -86,12 +86,14 @@ bool TargetPointSender::isSameTarget(const geometry_msgs::Point& target){
 	for(int i=0;i<original_target_points_.size();i++){
 		diff.x = original_target_points_[i].x - target.x;
 		diff.y = original_target_points_[i].y - target.y;
-		diff_length = std::sqrt(std::pow(diff.x,2)-std::pow(diff.y,2));
+		diff_length = std::sqrt(std::pow(diff.x,2)+std::pow(diff.y,2));
+		ROS_INFO_STREAM("Diff:" << diff_length);
 		if(diff_length < 5.0){
 			return true;
 		}
-		return false;
 	}
+	original_target_points_.push_back(target);
+	return false;
 }
 
 tf::StampedTransform TargetPointSender::getRobotPosGL()
@@ -117,10 +119,10 @@ void TargetPointSender::publishStopPoint()
 	target_point_.header.stamp = ros::Time::now();
 	target_point_pub_.publish(target_point_);
 
-	ROS_INFO("%.6f %.6f %.6f",
-		target_point_.point.x,
-		target_point_.point.y,
-		target_point_.point.z);
+	// ROS_INFO("%.6f %.6f %.6f",
+	// 	target_point_.point.x,
+	// 	target_point_.point.y,
+	// 	target_point_.point.z);
 }
 
 bool TargetPointSender::onStopPoint(const geometry_msgs::Point& dest, double dist_err){
@@ -136,7 +138,7 @@ bool TargetPointSender::onStopPoint(const geometry_msgs::Point& dest, double dis
 
 void TargetPointSender::run(){
 	while(ros::ok()){
-		if(!isSameTarget(target_point_.point)){
+		if(target_point_.point.x != 0 && !isSameTarget(target_point_.point)){
 			publishStopPoint();
 			while(!onStopPoint(target_point_.point, 1.0) && !is_stop_){
 				sleep();
