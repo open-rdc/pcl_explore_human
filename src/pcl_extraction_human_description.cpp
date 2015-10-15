@@ -49,6 +49,9 @@ ros::Publisher pub_point;
 tf::TransformListener *listener;
 int g_max_inten = 0;
 
+std::string model_filename;
+std::string scale_filename;
+
 void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 {
 	int is_save = false;
@@ -281,10 +284,10 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		double lower,upper;
 		double predict;
 		struct svm_model* model = svm_load_model(
-			"description_scaled.model");
+			model_filename.c_str());
 		struct svm_node *nodes;
 		nodes = (struct svm_node *)malloc((description.size()+1)*sizeof(struct svm_node));
-		fp_scale = fopen("150926_scaledata.scale","r");
+		fp_scale = fopen(scale_filename.c_str(),"r");
 		if(fp_scale == NULL || model == NULL){
 			ROS_WARN_STREAM("Can't find model or scale data");
 			return;
@@ -359,7 +362,11 @@ int main (int argc, char** argv)
 	ros::Subscriber sub = nh.subscribe ("output_humansize_cloud", 0, cloud_cb);
 
 	pub = nh.advertise<sensor_msgs::PointCloud2>("translate_humansize_cloud", 1);
-	pub_point = nh.advertise<geometry_msgs::PointStamped>("stoppoint_",1);
+	pub_point = nh.advertise<geometry_msgs::PointStamped>("target_point",1);
+
+	std::string filename = "";
+	nh.param("model_file", model_filename, filename);
+	nh.param("scale_file", scale_filename, filename);
 
 	// Spin
 	ros::spin ();
