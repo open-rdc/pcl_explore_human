@@ -332,21 +332,23 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		predict = svm_predict(model,nodes);
 		std::cout << "Predict: " << predict << std::endl;
 
-		Vector4f center_of_mass_base;
-		pcl::compute3DCentroid(*conv_input, center_of_mass_base);
-		output_point->point.x = center_of_mass_base[0];
-		output_point->point.y = center_of_mass_base[1];
-		output_point->point.z = center_of_mass_base[2];
-		std::cout << "target_center :" << center_of_mass_base[1] << "," << center_of_mass_base[0] << "," << center_of_mass_base[2] << std::endl;
-		output_point->header.frame_id = "base_link";
-		output_point->header.stamp = input->header.stamp;
-		try{
-			listener->transformPoint("/map", *output_point, output_point_);
+		if(predict == 1){
+			Vector4f center_of_mass_base;
+			pcl::compute3DCentroid(*conv_input, center_of_mass_base);
+			output_point->point.x = center_of_mass_base[0];
+			output_point->point.y = center_of_mass_base[1];
+			output_point->point.z = center_of_mass_base[2];
+			std::cout << "target_center :" << center_of_mass_base[1] << "," << center_of_mass_base[0] << "," << center_of_mass_base[2] << std::endl;
+			output_point->header.frame_id = "base_link";
+			output_point->header.stamp = input->header.stamp;
+			try{
+				listener->transformPoint("/map", *output_point, output_point_);
+			}
+			catch(tf::TransformException &e){
+				ROS_WARN_STREAM("tf::TransformException: " << e.what());
+			}
+			pub_point.publish(output_point_);
 		}
-		catch(tf::TransformException &e){
-			ROS_WARN_STREAM("tf::TransformException: " << e.what());
-		}
-		pub_point.publish(output_point_);
 	}
 }
 
