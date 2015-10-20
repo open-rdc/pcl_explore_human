@@ -289,7 +289,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		nodes = (struct svm_node *)malloc((description.size()+1)*sizeof(struct svm_node));
 		fp_scale = fopen(scale_filename.c_str(),"r");
 		if(fp_scale == NULL || model == NULL){
-			ROS_WARN_STREAM("Can't find model or scale data");
+			ROS_ERROR_STREAM("Can't find model or scale data");
 			return;
 		}
 		if(fgetc(fp_scale) != 'x'){
@@ -297,7 +297,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		}
 		fscanf(fp_scale,"%lf %lf",&lower,&upper);
 		
-		ROS_INFO_STREAM("lower: " << lower << "upper: "<< upper);
+		// ROS_INFO_STREAM("lower: " << lower << "upper: "<< upper);
 		while(fscanf(fp_scale,"%d %lf %lf\n",&idx,&scale_min_tmp,&scale_max_tmp) == 3){
 			scale_min.push_back(scale_min_tmp);
 			scale_max.push_back(scale_max_tmp);
@@ -330,7 +330,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		nodes[index].index = -1;
 		std::cout << std::endl;
 		predict = svm_predict(model,nodes);
-		std::cout << "Predict: " << predict << std::endl;
+		ROS_INFO_STREAM("Predict" << predict);
 
 		if(predict == 1){
 			Vector4f center_of_mass_base;
@@ -338,7 +338,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 			output_point->point.x = center_of_mass_base[0];
 			output_point->point.y = center_of_mass_base[1];
 			output_point->point.z = center_of_mass_base[2];
-			std::cout << "target_center :" << center_of_mass_base[1] << "," << center_of_mass_base[0] << "," << center_of_mass_base[2] << std::endl;
+			ROS_INFO_STREAM("target_center :" << center_of_mass_base[1] << "," << center_of_mass_base[0] << "," << center_of_mass_base[2]);
 			output_point->header.frame_id = "base_link";
 			output_point->header.stamp = input->header.stamp;
 			try{
