@@ -337,7 +337,18 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 			pcl::compute3DCentroid(*conv_input, center_of_mass_base);
 			output_point->point.x = center_of_mass_base[0];
 			output_point->point.y = center_of_mass_base[1];
-			output_point->point.z = center_of_mass_base[2];
+			if(std::abs(center_of_mass_base[1]) > 2.0){
+				if(center_of_mass_base[1] < 0){
+					output_point->point.y = center_of_mass_base[1] + 1.0;
+				}
+				else{
+					output_point->point.y = center_of_mass_base[1] - 1.0;
+				}
+			}
+			else{
+				output_point->point.x = center_of_mass_base[0] - 2.0;
+			}
+			output_point->point.z = 0.0;
 			ROS_INFO_STREAM("target_center :" << center_of_mass_base[1] << "," << center_of_mass_base[0] << "," << center_of_mass_base[2]);
 			output_point->header.frame_id = "base_link";
 			output_point->header.stamp = input->header.stamp;

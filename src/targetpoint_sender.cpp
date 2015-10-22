@@ -37,7 +37,6 @@ class TargetPointSender{
 		void sleep();
 		void publishStopPoint();
 		bool onStopPoint(const geometry_msgs::Point& dest, double dist_err);
-
 };
 
 TargetPointSender::TargetPointSender() :
@@ -87,11 +86,11 @@ bool TargetPointSender::isSameTarget(const geometry_msgs::Point& target){
 		diff.x = original_target_points_[i].x - target.x;
 		diff.y = original_target_points_[i].y - target.y;
 		diff_length = std::sqrt(std::pow(diff.x,2)+std::pow(diff.y,2));
-		ROS_INFO_STREAM("Diff:" << diff_length);
 		if(diff_length < 5.0){
 			return true;
 		}
 	}
+	ROS_INFO_STREAM("Diff:" << diff_length);
 	original_target_points_.push_back(target);
 	return false;
 }
