@@ -9,7 +9,8 @@
 #include <pcl/common/common.h>
 #include <pcl/common/centroid.h>
 #include <pcl/common/pca.h>
-#include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/features/fpfh.h>
+#include <pcl/features/normal_3d.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/PCLPointCloud2.h>
 
@@ -85,6 +86,28 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	double theta;
 	std::vector<double> description;
 	description.push_back(cloud_size);
+
+	pcl::PointCloud<pcl::PointNormal>::Ptr normals(new pcl::PointCloud<pcl::PointNormal>());
+	pcl::NormalEstimation<pcl::PointXYZI, pcl::PointNormal> ne;
+	ne.setInputCloud(conv_input);
+	ne.setKSearch(24);
+	ne.compute(*normals);
+
+	pcl::FPFHEstimation<pcl::PointXYZI, pcl::PointNormal, pcl::FPFHSignature33> fpfh;
+	fpfh.setInputCloud(conv_input);
+	fpfh.setInputNormals(normals);
+
+	pcl::search::KdTree<pcl::PointXYZI>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZI>());
+	fpfh.setSearchMethod(tree);
+
+	pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfhs(new pcl::PointCloud<pcl::FPFHSignature33>());
+	fpfh.setRadiusSearch(0.05);
+	fpfh.compute(*fpfhs);
+
+	// for(int i=0;i<fpfhs.histogram.size();i++){
+		std::cout << fpfhs->points.size();
+	// }
+	std::cout << std::endl;
 
 	//PCA
 	pca.setInputCloud(conv_input);
