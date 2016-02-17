@@ -79,44 +79,13 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	
 	ROS_INFO_STREAM( "is SACSegmentation" << sacSegmentFlag );
 
-	if(!sacSegmentFlag){
-		pcl::PassThrough<pcl::PointXYZI> pass;
-		pass.setFilterLimitsNegative (true);
-		pass.setInputCloud(cloud_boxel);
-		pass.setFilterFieldName("z");
-		pass.setFilterLimits(-2.0,0.0);
-		pass.filter(*cloud_boxel);
-	}
-	else{
-		//Plane segmentation
-		pcl::SACSegmentation<pcl::PointXYZI> seg;
-		seg.setOptimizeCoefficients(true);
-		seg.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
-		seg.setMethodType(pcl::SAC_RANSAC);
-		seg.setAxis(Eigen::Vector3f(0,0,1));
-		seg.setEpsAngle (20);
-		//Iteration count
-		seg.setMaxIterations(1000);
-		seg.setDistanceThreshold(0.01);
-
-		//Plane Extract
-		pcl::ExtractIndices<pcl::PointXYZI> extract;
-		int i=0, nr_points = (int) cloud_boxel->points.size();
-		while( cloud_boxel->points.size() > 0.3 * nr_points )
-		{
-			seg.setInputCloud(cloud_boxel);
-			seg.segment(*inliers, *coefficients);
-			if( inliers->indices.size() == 0)
-			{
-				std::cout << "Could not estimate a planar model for the given dataset." << std::endl;
-				break;
-			}
-			extract.setInputCloud(cloud_boxel);
-			extract.setIndices(inliers);
-			extract.setNegative(true);
-			extract.filter(*cloud_boxel);
-		}
-	}
+	pcl::PassThrough<pcl::PointXYZI> pass;
+	pass.setFilterLimitsNegative (true);
+	pass.setInputCloud(cloud_boxel);
+	pass.setFilterFieldName("z");
+	pass.setFilterLimits(-2.0,0.0);
+	pass.filter(*cloud_boxel);
+	
 	tree->setInputCloud( cloud_boxel );
 	std::vector<pcl::PointIndices> cluster_indices;
 	pcl::EuclideanClusterExtraction<pcl::PointXYZI> ec;
