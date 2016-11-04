@@ -279,6 +279,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 //	std::cout << std::endl;
 
 
+
 	//Calculate Slice distribution
 	pcl::PointXYZI min_pt, max_pt;
 	//std::vector<pcl::PointIndices> cluster_indices;
@@ -295,6 +296,8 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 //	std::cout <<"min_pt.z : "<< min_pt.z<< ", max_pt.z : " << max_pt.z << std::endl;
 //	std::cout <<"sector_height : "<< sector_height << std::endl;
 
+	
+
 	int a=0;
 
 	for(double sec_h = min_pt.z,i = 0; sec_h < max_pt.z - sector_height; sec_h += sector_height, i++){
@@ -305,6 +308,8 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		pass.filter(*cloud_boxel); //*cloud_sliced
 
 		std::vector<pcl::PointIndices> cluster_indices;
+
+
 
 		//pcl::getMinMax3D(*cloud_sliced,sliced_min_pt,sliced_max_pt);
 
@@ -379,6 +384,8 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 
 		}
 
+
+
 		float max_point[1] = {0}; //[0] : X, [1] : Y
 		float min_point[1] = {0}; 
 
@@ -434,7 +441,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 
 	if(is_save){
 		std::ofstream ofs;
-		ofs.open("description_1015_nega.txt", std::ios::ate | std::ios::app);
+		ofs.open("description_new.txt", std::ios::ate | std::ios::app);
 		ofs << "2 ";
 		for(int i=0;i<description.size();i++){
 			ofs << i+1 << ":" << description[i] << " ";

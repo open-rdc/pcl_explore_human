@@ -119,6 +119,11 @@ add_executable(pcl_detect_humansize_cloud src/pcl_detect_humansize_cloud.cpp)
 add_executable(pcl_extraction_shot_description src/pcl_extraction_shot_description.cpp)
 add_executable(pcl_extraction_human_description src/pcl_extraction_human_description.cpp src/svm.cpp)
 add_executable(targetpoint_sender src/targetpoint_sender.cpp)
+add_executable(intensity_test src/intensity_test.cpp)
+add_executable(human_detection src/human_detection.cpp)
+add_executable(test_wall src/test_wall.cpp)
+add_executable(test_wall_inten src/test_wall_inten.cpp)
+#add_executable(intensity_test2 src/intensity_test2.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -129,6 +134,11 @@ target_link_libraries(pcl_detect_humansize_cloud ${catkin_LIBRARIES})
 target_link_libraries(pcl_extraction_shot_description ${catkin_LIBRARIES})
 target_link_libraries(pcl_extraction_human_description ${catkin_LIBRARIES})
 target_link_libraries(targetpoint_sender ${catkin_LIBRARIES})
+target_link_libraries(intensity_test ${catkin_LIBRARIES})
+target_link_libraries(human_detection ${catkin_LIBRARIES})
+target_link_libraries(test_wall ${catkin_LIBRARIES})
+target_link_libraries(test_wall_inten ${catkin_LIBRARIES})
+#target_link_libraries(intensity_test2 ${catkin_LIBRARIES})
 #############
 ## Install ##
 #############
