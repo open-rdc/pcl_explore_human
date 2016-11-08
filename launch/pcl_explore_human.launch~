@@ -1,5 +1,5 @@
 <launch>
-  <node name="intensity_wall" pkg="pcl_explore_human" type="intensity_wall"></node>
+  <node name="human_detection" pkg="pcl_explore_human" type="human_detection"></node>
   <node name="pcl_extraction_human_description" pkg="pcl_explore_human" type="pcl_extraction_human_description" output="screen">
   	<param name="model_file" value="$(find pcl_explore_human)/svm_cfg/model.model"/>
   	<param name="scale_file" value="$(find pcl_explore_human)/svm_cfg/model.scale"/>
