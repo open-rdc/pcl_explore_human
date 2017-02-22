@@ -55,9 +55,8 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 
 
 	/*--- for debug ---*/
-	bool sacSegmentFlag = false; //XXX true : time long 
-	bool is_save = true;
-	bool has_candidate = false;
+	bool sacSegmentFlag = false; 
+	bool is_save = false;
 	bool highIntensity_point = false;
 	bool is_output = false;
 
@@ -85,8 +84,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	pcl::fromROSMsg(transformed_cloud, *conv_input);
 
 
-	// intensity judge no down sampling data
-	
+	//Judge reflection intensity
 	std::vector<pcl::PointIndices> cluster_indices_one;
 	pcl::EuclideanClusterExtraction<pcl::PointXYZI> ee;
 	ee.setSearchMethod(tree);
@@ -96,13 +94,13 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	int cluster_one;
 	int i=0;
 	int j=0;
-	float intensity_value[20000][2];
+	float intensity_value[20000][4];
 	int HighIntensity_count = 0;
-	int loop_count = 0;
-	int reflection_intensity = 2000;
+	bool loop = true;
+	int reflection_intensity = 2000; //2000 - 1200
 
 
-	for(reflection_intensity = 2000;(!highIntensity_point) && (reflection_intensity >= 1200); reflection_intensity = reflection_intensity - 200){
+	while(loop){
 		for(std::vector<pcl::PointIndices>::const_iterator it = cluster_indices_one.begin();it != cluster_indices_one.end (); ++it)
 		{
 			pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_all_filtered(new pcl::PointCloud<pcl::PointXYZI>());
@@ -114,8 +112,6 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 			{
 				if( (conv_input -> points[*pit].intensity > reflection_intensity) && (conv_input -> points[*pit].x < 7.5) && (-7.5 < conv_input -> points[*pit].y < 7.5) ){
 	
-					std::cout<<"HighIntensity [" <<i<<"]  (intensity : "<<conv_input -> points[*pit].intensity<<")"<<std::endl;
-	
 					i++; // i=1
 					cut_count = 1;
 					HighIntensity_count++;
@@ -123,14 +119,22 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 					intensity_value[i][0]= conv_input -> points[*pit].x; 
 					intensity_value[i][1]= conv_input -> points[*pit].y;
 					intensity_value[i][2]= conv_input -> points[*pit].z;
-	
-					//std::cout<<"XYZ test : "<<intensity_value[i][0]<<" , "<<intensity_value[i][1]<<" , "<<intensity_value[i][2]<<std::endl;
+					intensity_value[i][3]= conv_input -> points[*pit].intensity;
+
 					break;
 				}
 			}
 		}
+		if((!highIntensity_point) && (reflection_intensity > 1200)){
+			reflection_intensity = reflection_intensity - 200;
+			loop = true;
+		}else{
+			loop = false;
+		}
 	}
-	reflection_intensity = reflection_intensity + 200;
+	std::cout<<"Refrection intensity : "<< reflection_intensity <<std::endl;
+
+
 
 //sort
 
@@ -155,38 +159,39 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		intensity_value[i][0]= 0; 
 		intensity_value[i][1]= 0;
 		intensity_value[i][2]= 0;
+		intensity_value[i][3]= 0;
 	}
 
-	float max_point[2][2] = {0}; //MAX  :  [0] : X, [1] : Y, [2]:Z               IN  :   [0] : X, [1] : Y, [2]:Z   
+	float max_point[2][2] = {0}; //MAX: [0]:X, [1]:Y, [2]:Z , IN: [0]:X, [1] :Y, [2]:Z   
 	float min_point[2][2] = {0}; 
 
-	max_point[0][0] = intensity_value[1][0]; //XX
-	max_point[0][1] = intensity_value[1][1]; //XY
-	max_point[0][2] = intensity_value[1][2]; //XZ
-	min_point[0][0] = intensity_value[1][0]; //XX
-	min_point[0][1] = intensity_value[1][1]; //XY
-	min_point[0][2] = intensity_value[1][2]; //XZ
+	max_point[0][0] = intensity_value[1][0]; 
+	max_point[0][1] = intensity_value[1][1]; 
+	max_point[0][2] = intensity_value[1][2]; 
+	min_point[0][0] = intensity_value[1][0]; 
+	min_point[0][1] = intensity_value[1][1]; 
+	min_point[0][2] = intensity_value[1][2]; 
 
 
-	max_point[1][0] = intensity_value[1][0]; //YX
-	max_point[1][1] = intensity_value[1][1]; //YY
-	max_point[1][2] = intensity_value[1][2]; //YZ
-	min_point[1][0] = intensity_value[1][0]; //YX
-	min_point[1][1] = intensity_value[1][1]; //YY
-	min_point[1][2] = intensity_value[1][2]; //YZ
+	max_point[1][0] = intensity_value[1][0]; 
+	max_point[1][1] = intensity_value[1][1]; 
+	max_point[1][2] = intensity_value[1][2]; 
+	min_point[1][0] = intensity_value[1][0]; 
+	min_point[1][1] = intensity_value[1][1]; 
+	min_point[1][2] = intensity_value[1][2]; 
 
 
-	max_point[2][0] = intensity_value[1][0]; //ZX
-	max_point[2][1] = intensity_value[1][1]; //ZY
-	max_point[2][2] = intensity_value[1][2]; //ZZ
-	min_point[2][0] = intensity_value[1][0]; //ZX
-	min_point[2][1] = intensity_value[1][1]; //ZY
-	min_point[2][2] = intensity_value[1][2]; //ZZ
+	max_point[2][0] = intensity_value[1][0]; 
+	max_point[2][1] = intensity_value[1][1]; 
+	max_point[2][2] = intensity_value[1][2]; 
+	min_point[2][0] = intensity_value[1][0]; 
+	min_point[2][1] = intensity_value[1][1]; 
+	min_point[2][2] = intensity_value[1][2]; 
 
 
 	for(j = 1; j <= i; j++)
 	{
-		std::cout<<"XYZ save : ["<<j<<"]"<<"X: "<<intensity_value[j][0]<<" , Y: "<<intensity_value[j][1]<<" ,  Z: "<<intensity_value[j][2]<<std::endl;
+		std::cout<<"XYZ save : ["<<j<<"]"<<"X: "<<intensity_value[j][0]<<" , Y: "<<intensity_value[j][1]<<" ,  Z: "<<intensity_value[j][2]<<" ,  I: "<<intensity_value[j][3]<<std::endl;
 		
 		if( min_point[0][0] > intensity_value[j][0] ){
 			min_point[0][0] = intensity_value[j][0];
@@ -220,13 +225,10 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		}
 	}
 
-
-
 	std::cout<<"MAX POINT [X] :" << "x : "<<max_point[0][0] <<"  y : "<<max_point[0][1]<<"  z : "<<max_point[0][2]<<std::endl;
 	std::cout<<"MAX POINT [Y] :" << max_point[1][1] <<std::endl;
 	std::cout<<"MIN POINT [Y] :" << min_point[1][1] <<std::endl;
 	std::cout<<"MAX POINT [Z] :" << max_point[2][2] <<std::endl;
-
 
 
 	pcl::VoxelGrid<pcl::PointXYZI> vg; 
@@ -301,7 +303,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 				}
 			}
 			save_number[f] = i;
-			std::cout<<"**************************************count_ground [" <<f<<"]"<<" SUM this wall number :  "<< save_number[f] <<std::endl;
+			std::cout<<"count_ground [" <<f<<"]"<<" SUM this wall number :  "<< save_number[f] <<std::endl;
 		}
 		for(f = 0; f < 20; f++){
 			if((save_number[f] > 100) && (save_number[f] = save_number[f-1] * 10)){
@@ -311,7 +313,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 				pass.setFilterFieldName("z");
 				pass.setFilterLimits(-2.0, min_point[2] - f * 0.05);
 				pass.filter(*cloud_boxel);
-				std::cout<<"************************************cccccccccccccccccuuuuuuuuuuuuuuuuttttttttttttttt"<<std::endl;
+				std::cout<<"cut"<<std::endl;
 				break;
 			}else{
 				pcl::PassThrough<pcl::PointXYZI> pass;
@@ -323,6 +325,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 			}	
 		}	
 		*/
+
 		pcl::PassThrough<pcl::PointXYZI> pass;
 		pass.setFilterLimitsNegative (true);
 		pass.setInputCloud(cloud_boxel);
@@ -387,6 +390,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 			above_test.setFilterFieldName("z");
 			above_test.setFilterLimits(max_point[0][2]+1.0,50.0);
 			above_test.filter(*cloud_boxel_count);
+
 			pcl::PassThrough<pcl::PointXYZI> below;
 			below.setFilterLimitsNegative (true);
 			below.setInputCloud(cloud_boxel_count);
@@ -400,6 +404,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 			front.setFilterFieldName("x");
 			front.setFilterLimits(-50.0, max_point[0][0]+e/20);
 			front.filter(*cloud_boxel_count);
+
 			pcl::PassThrough<pcl::PointXYZI> back;
 			back.setFilterLimitsNegative (true);
 			back.setInputCloud(cloud_boxel_count);
@@ -407,6 +412,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 			back.setFilterLimits(max_point[0][0]+e/20+0.05 , 50.0);
 			back.filter(*cloud_boxel_count);
 			e++;
+
 			std::vector<pcl::PointIndices> cluster_indices_one;
 			pcl::EuclideanClusterExtraction<pcl::PointXYZI> en;
 			en.setSearchMethod(tree);
@@ -519,26 +525,12 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 			}
 		}
 
-//		std::cout <<  "maxmin XYZ : " <<"max.X: "<< max_pt.x << ", min.X: " << min_pt.x <<", max.Y: "<< max_pt.y << ", min.Y: " << min_pt.y <<", max.Z: "<< max_pt.z << ", min.Z: " << min_pt.z << std::endl;
+		//std::cout <<  "maxmin XYZ : " <<"max.X: "<< max_pt.x << ", min.X: " << min_pt.x <<", max.Y: "<< max_pt.y << ", min.Y: " << min_pt.y <<", max.Z: "<< max_pt.z << ", min.Z: " << min_pt.z << std::endl;
 
-		int d = 0;         //**********d= 0******************
-		//int d = 1;
-		//int f = 0;
-
-		/*for(j = 1; j <= i; j++ ){
-			e++;
-			if( (max_pt.x > intensity_value[j][0]) && (intensity_value[j][0] > min_pt.x) && (max_pt.y > intensity_value[j][1]) && ( intensity_value[j][1] > min_pt.y) && (max_pt.z > intensity_value[j][2]) && (intensity_value[j][2] > min_pt.z) ){
-				d = 1;
-				j = i + 1;
-			}else{
-				d = 0;
-			}
-		}*/
-
- 		//j = 1;
+		int d = 0;  
 		int k = 1;
 
- 		//add judge
+ 		//Judge high reflection intensity in this cluster
 		while(d == 0){
 			if((k <= i) && (i != 0)){
 			if( (max_pt.x > intensity_value[k][0]) && (intensity_value[k][0] > min_pt.x) && (max_pt.y > intensity_value[k][1]) && ( intensity_value[k][1] > min_pt.y) && (max_pt.z > intensity_value[k][2]) && (intensity_value[k][2] > min_pt.z) )
@@ -571,11 +563,9 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 				std::cout << "This cluster is a size of the target" << std::endl;
 
 				if(d == 1){
-					std::cout << "### Find Target ###  ### Find Target ###  ### Find Target ###  ### Find Target ###  ### Find Target ###" << std::endl;
+					std::cout << "Find Target" << std::endl;
 					std::cout <<  "Target Size : " <<"width: "<< width << ", depth: " << depth << ", height: " << height << std::endl;
 					
-					has_candidate = true;
-
 					//Save process
 					cloud_all_filtered -> width = 1;
 					cloud_all_filtered -> height = cloud_all_filtered -> points.size();
@@ -613,7 +603,6 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 				cloud_all_filtered->erase(cloud_all_filtered->begin()+1,cloud_all_filtered->end());
 			}
 
-
 		if( cloud_all_filtered->points.size() > 1 ){
 			pcl::toROSMsg(*cloud_all_filtered, output);
 			// pcl::toROSMsg(*cloud_boxel, output);
@@ -629,12 +618,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		}
 	}
 
-	std::cout<<is_output<<std::endl;
-
-
-
-	if(/*(highIntensity_point)*/(HighIntensity_count > 4) && (!is_output) ){
-
+	if((HighIntensity_count > 4) && (!is_output) ){
 		pcl::PassThrough<pcl::PointXYZI> back;
 		back.setFilterLimitsNegative (true);
 		back.setInputCloud(cloud_boxel);
@@ -728,19 +712,12 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 				}
 			}
 
+			//std::cout <<  "maxmin XYZ : " <<"max.X: "<< max_pt.x << ", min.X: " << min_pt.x <<", max.Y: "<< max_pt.y << ", min.Y: " << min_pt.y <<", max.Z: "<< max_pt.z << ", min.Z: " << min_pt.z << std::endl;
 
-			//		std::cout <<  "maxmin XYZ : " <<"max.X: "<< max_pt.x << ", min.X: " << min_pt.x <<", max.Y: "<< max_pt.y << ", min.Y: " << min_pt.y <<", max.Z: "<< max_pt.z << ", min.Z: " << min_pt.z << std::endl;
-
-		int d = 0;         //d= 0******************
-		//int d = 1;
-		//int f = 0;
-
-		
-
- 		//j = 1;
+		int d = 0;        
 		int k = 1;
 
- 		//add judge
+ 		 //Judge high reflection intensity in this cluster
 		while(d == 0){
 			if((k <= i) && (i != 0)){
 			if( (max_pt.x > intensity_value[k][0]) && (intensity_value[k][0] > min_pt.x) && (max_pt.y > intensity_value[k][1]) && ( intensity_value[k][1] > min_pt.y) && (max_pt.z > intensity_value[k][2]) && (intensity_value[k][2] > min_pt.z) )
@@ -754,11 +731,6 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 				d = 2;
  			}
 		}
-
-
-			//printf("d : %d\n", d);
-
-//			printf("The number of loop : %d\n", k );
 
 		if(d == 1){
 			printf("This cluster includes high points reflection intensity");
@@ -778,10 +750,8 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 				std::cout << "This cluster is a size of the target" << std::endl;
 
 				if(d == 1){
-					std::cout << "### Find Target ###  ### Find Target ###  ### Find Target ###  ### Find Target ###  ### Find Target ###" << std::endl;
+					std::cout << "Find Target" << std::endl;
 					std::cout <<  "Target Size : " <<"width: "<< width << ", depth: " << depth << ", height: " << height << std::endl;
-					
-					has_candidate = true;
 
 					//Save process
 					cloud_all_filtered -> width = 1;
@@ -811,7 +781,6 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 				cloud_all_filtered->erase(cloud_all_filtered->begin()+1,cloud_all_filtered->end());
 			}
 
-
 			if( cloud_all_filtered->points.size() > 1 ){
 				pcl::toROSMsg(*cloud_all_filtered, output);
 				// pcl::toROSMsg(*cloud_boxel, output);
@@ -826,7 +795,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 				l++;
 			}			
 		}	
-		std::cout <<  "******************* PassThrough *****************************" << std::endl;
+		std::cout << "PassThrough" << std::endl;
 		c++;
 	}else{
 		z++;
@@ -838,8 +807,6 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	printf("PassThrough : %d\n", c );
 	printf("not PassThrough : %d\n", z );
 	printf("HighIntensity_count : %d\n", HighIntensity_count );
-
-	
 
 	//get finish time
 	gettimeofday(&f, NULL);
