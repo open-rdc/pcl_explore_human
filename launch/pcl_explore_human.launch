@@ -1,6 +1,8 @@
 <launch>
-  <node name="pcl_detect_humansize_cloud" pkg="pcl_explore_human" type="pcl_detect_humansize_cloud"></node>
-  <node name="pcl_extraction_human_description" pkg="pcl_explore_human" type="pcl_extraction_human_description" output="screen">
+  <node name="pcl_detect_humansize_cloud" pkg="pcl_explore_human" type="pcl_detect_humansize_cloud" output="screen">
+  	<remap from="/hokuyo3d/hokuyo_cloud2" to="accumulate_scan_cloud" />
+  </node>
+  <node name="pcl_extraction_human_description" pkg="pcl_explore_human" type="pcl_extraction_human_description" output="screen" launch-prefix="xterm -e gdb --args">
   	<param name="model_file" value="$(find pcl_explore_human)/svm_cfg/model.model"/>
   	<param name="scale_file" value="$(find pcl_explore_human)/svm_cfg/model.scale"/>
   </node>

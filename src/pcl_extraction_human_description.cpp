@@ -59,7 +59,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 
 	// Create a container for the data.
 	pcl::PointCloud<pcl::PointXYZI>::Ptr conv_input(new pcl::PointCloud<pcl::PointXYZI>());
-	
+
 	input->fields[3].name = "intensity";
 	pcl::fromROSMsg(*input, *conv_input);
 
@@ -157,7 +157,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 	Vector3f point_from_center_of_mass;
 
 	// intensity buffer
-	double intensity_sum=0, intensity_ave=0, intensity_pow_sum=0, intensity_std_dev=0, max_intensity = 5000;
+	double intensity_sum=0, intensity_ave=0, intensity_pow_sum=0, intensity_std_dev=0, max_intensity = 20000;
 	std::vector<double> intensity_histgram(25);
 
 	for(int i=0; i<cloud_size; i++){
@@ -171,7 +171,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		convariance_matrix_tmp += point_tmp * point_tmp.transpose();
 
 		//Calculate three dimentional moment of inertia matrix
-		moment_of_inertia_matrix_tmp << 
+		moment_of_inertia_matrix_tmp <<
 		powf(point_tmp[1],2.0f)+powf(point_tmp[2],2.0f),	-point_tmp[0]*point_tmp[1],							-point_tmp[0]*point_tmp[2],
 		-point_tmp[0]*point_tmp[1],							powf(point_tmp[0],2.0f)+powf(point_tmp[2],2.0f),	-point_tmp[1]*point_tmp[2],
 		-point_tmp[0]*point_tmp[2],							-point_tmp[1]*point_tmp[2],							powf(point_tmp[0],2.0f)+powf(point_tmp[1],2.0f);
@@ -186,8 +186,8 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 			g_max_inten = transform_cloud_rotate->points[i].intensity;
 		}
 	}
-	//Calculate Convariance matrix 
-	convariance_matrix = (1.0f/cloud_size) * convariance_matrix_tmp.array();	
+	//Calculate Convariance matrix
+	convariance_matrix = (1.0f/cloud_size) * convariance_matrix_tmp.array();
 
 	// Calculate intensity distribution
 	intensity_ave = intensity_sum / cloud_size;
@@ -239,7 +239,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 
 	pcl::PassThrough<pcl::PointXYZI> pass;
 	std::vector<std::vector<double> > slice_dist(sectors,std::vector<double> (2));
-	
+
 	for(double sec_h = min_pt.z,i = 0; sec_h < max_pt.z - sector_height; sec_h += sector_height, i++){
 		pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_sliced(new pcl::PointCloud<pcl::PointXYZI>());
 		pass.setInputCloud(transform_cloud_rotate);
@@ -296,7 +296,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 			return;
 		}
 		fscanf(fp_scale,"%lf %lf",&lower,&upper);
-		
+
 		// ROS_INFO_STREAM("lower: " << lower << "upper: "<< upper);
 		while(fscanf(fp_scale,"%d %lf %lf\n",&idx,&scale_min_tmp,&scale_max_tmp) == 3){
 			scale_min.push_back(scale_min_tmp);
@@ -319,7 +319,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 				}
 				else{
 					nodes[index].index = i+1;
-					nodes[index].value = lower + (upper-lower) * 
+					nodes[index].value = lower + (upper-lower) *
 							(description[i]-scale_min[index])/
 							(scale_max[index]-scale_min[index]);
 				}
