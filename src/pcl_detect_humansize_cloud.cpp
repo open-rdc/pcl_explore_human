@@ -14,7 +14,6 @@
 #include <pcl/segmentation/impl/conditional_euclidean_clustering.hpp>
 #include <pcl/sample_consensus/method_types.h>
 #include <pcl/sample_consensus/model_types.h>
-#include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/statistical_outlier_removal.h>
@@ -52,10 +51,15 @@ class ExtractHumansizeCloud{
 		double max_target_depth_;
 		double min_target_height_;
 		double max_target_height_;
+		double search_range_;
 
 		int intensity_threshold_;
+		int min_intensity_threshold_;
+		int intensity_decrease_;
+		int min_inner_high_intensities_;
 		int min_cluster_size_;
 		int max_cluster_size_;
+
 };
 
 ExtractHumansizeCloud::ExtractHumansizeCloud(ros::NodeHandle nh)
@@ -77,6 +81,10 @@ ExtractHumansizeCloud::ExtractHumansizeCloud(ros::NodeHandle nh)
 	private_nh.param("min_cluster_size",min_cluster_size_,10);
 	private_nh.param("max_cluster_size",max_cluster_size_,1000000);
 	private_nh.param("intensity_threshold", intensity_threshold_, 2000);
+	private_nh.param("min_intensity_threshold", min_intensity_threshold_, 1200);
+	private_nh.param("intensity_decrease", intensity_decrease_, 200);
+	private_nh.param("inner_high_intensities", min_inner_high_intensities_, 1);
+	private_nh.param("search_range", search_range_, 7.5);
 	private_nh.param("save_file_path", save_file_path_, std::string("~/"));
 	private_nh.param("min_target_width", min_target_width_, 0.4);
 	private_nh.param("max_target_width", max_target_width_, 1.2);
@@ -114,6 +122,30 @@ void ExtractHumansizeCloud::cloud_cb(const sensor_msgs::PointCloud2Ptr& input)
 	//Conversion PointCloud2 intensity field name to PointXYZI intensity field name.
 	transformed_cloud.fields[3].name = "intensity";
 	pcl::fromROSMsg(transformed_cloud, *conv_input);
+
+	bool has_high_intensity = false;
+	int high_intensity_cnt = 0;
+	pcl::PointCloud<pcl::PointXYZI> high_intensities;
+	int intensity_threshold = intensity_threshold_;
+	while(!has_high_intensity){
+		for(auto& i:conv_input->points){
+			if(
+				(i.intensity > intensity_threshold) &&
+				(i.x < search_range_) &&
+				(i.y > -search_range_) &&
+				(i.y < search_range_)
+			){
+				high_intensity_cnt++;
+				has_high_intensity = true;
+				high_intensities.push_back(i);
+			}
+		}
+		if((!has_high_intensity) && (intensity_threshold >= min_intensity_threshold_)){
+			intensity_threshold -= 200;
+		}else if(intensity_threshold <= min_intensity_threshold_){
+			return;
+		}
+	}
 
 	// Voxel Grid
 	pcl::VoxelGrid<pcl::PointXYZI> vg;
@@ -163,89 +195,85 @@ void ExtractHumansizeCloud::cloud_cb(const sensor_msgs::PointCloud2Ptr& input)
 		// Now iterator count
 		now_cluster = it - cluster_indices.begin();
 
-		//High Intensity Judge
 		for(std::vector<int>::const_iterator pit = it->indices.begin(); pit != it->indices.end(); pit++)
 		{
-			if( cloud_boxel->points[*pit].intensity > intensity_threshold_){
-				is_highIntensity = true;
-				// If high intensity even one point, when build a flag
-				break;
+			// Corresponding point copy to cloud_all_filterd
+			cloud_all_filtered->points.push_back(cloud_boxel->points[*pit]);
+			now_point = pit - it->indices.begin();
+			// Measure size of high intensity index
+			if( now_point == 0 ){
+				min_pt = cloud_boxel -> points[*pit];
+				max_pt = cloud_boxel -> points[*pit];
+			}
+			if( min_pt.x > cloud_boxel -> points[*pit].x ){
+				min_pt.x = cloud_boxel -> points[*pit].x;
+			}
+			else if( max_pt.x < cloud_boxel -> points[*pit].x ){
+				max_pt.x = cloud_boxel -> points[*pit].x;
+			}
+			if( min_pt.y > cloud_boxel -> points[*pit].y ){
+				min_pt.y = cloud_boxel -> points[*pit].y;
+			}
+			else if( max_pt.y < cloud_boxel -> points[*pit].y ){
+				max_pt.y = cloud_boxel -> points[*pit].y;
+			}
+			if( min_pt.z > cloud_boxel -> points[*pit].z ){
+				min_pt.z = cloud_boxel -> points[*pit].z;
+			}
+			else if( max_pt.z < cloud_boxel -> points[*pit].z ){
+				max_pt.z = cloud_boxel -> points[*pit].z;
 			}
 		}
-		if(is_highIntensity){
-			for(std::vector<int>::const_iterator pit = it->indices.begin(); pit != it->indices.end(); pit++)
-			{
-				// Corresponding point copy to cloud_all_filterd
-				cloud_all_filtered->points.push_back(cloud_boxel->points[*pit]);
-				now_point = pit - it->indices.begin();
-				// Measure size of high intensity index
-				if( now_point == 0 ){
-					min_pt = cloud_boxel -> points[*pit];
-					max_pt = cloud_boxel -> points[*pit];
-				}
-				if( min_pt.x > cloud_boxel -> points[*pit].x ){
-					min_pt.x = cloud_boxel -> points[*pit].x;
-				}
-				else if( max_pt.x < cloud_boxel -> points[*pit].x ){
-					max_pt.x = cloud_boxel -> points[*pit].x;
-				}
-				if( min_pt.y > cloud_boxel -> points[*pit].y ){
-					min_pt.y = cloud_boxel -> points[*pit].y;
-				}
-				else if( max_pt.y < cloud_boxel -> points[*pit].y ){
-					max_pt.y = cloud_boxel -> points[*pit].y;
-				}
-				if( min_pt.z > cloud_boxel -> points[*pit].z ){
-					min_pt.z = cloud_boxel -> points[*pit].z;
-				}
-				else if( max_pt.z < cloud_boxel -> points[*pit].z ){
-					max_pt.z = cloud_boxel -> points[*pit].z;
+
+		double target_size[3];
+		
+		// Calculation target size
+		target_size[0] = fabs(max_pt.x - min_pt.x);
+		target_size[1] = fabs(max_pt.y - min_pt.y);
+		target_size[2] = fabs(max_pt.z - min_pt.z);
+
+		if(    ((target_size[0] < max_target_width_) && (target_size[0] > min_target_width_))
+			&& ((target_size[1] < max_target_depth_) && (target_size[1] > min_target_depth_))
+			&& ((target_size[2] < max_target_height_) && (target_size[2] > min_target_height_))
+			)
+		{
+			int inner_high_intensity_cnt = 0;
+			for(auto& i:high_intensities.points){
+				if(
+					(i.x < max_pt.x) && (i.x > min_pt.x) &&
+					(i.y < max_pt.y) && (i.y > min_pt.y) &&
+					(i.z < max_pt.z) && (i.z > min_pt.z)
+				){
+					inner_high_intensity_cnt++;
 				}
 			}
-		}
-		// Target size judge
-		if(is_highIntensity){
-			ROS_INFO_STREAM("Find include high intensity cloud");
-			double target_size[3];
-			
-			// Calculation target size
-			target_size[0] = fabs(max_pt.x - min_pt.x);
-			target_size[1] = fabs(max_pt.y - min_pt.y);
-			target_size[2] = fabs(max_pt.z - min_pt.z);
+			if(inner_high_intensity_cnt < min_inner_high_intensities_){
+				return;
+			}
+			ROS_INFO_STREAM("Find Target");
 
-			if(    ((target_size[0] < max_target_width_) && (target_size[0] > min_target_width_))
-				&& ((target_size[1] < max_target_depth_) && (target_size[1] > min_target_depth_))
-				&& ((target_size[2] < max_target_height_) && (target_size[2] > min_target_height_))
-				)
-			{
-				ROS_INFO_STREAM("Find Target");
+			//Save Process
+			cloud_all_filtered->width = 1;
+			cloud_all_filtered->height = cloud_all_filtered->points.size();
 
-				//Save Process
-				cloud_all_filtered->width = 1;
-				cloud_all_filtered->height = cloud_all_filtered->points.size();
+			if(is_save_){
+				std::string filename;
+				std::stringstream filename_st;
+				filename_st << input->header.stamp;
+				filename.append(save_file_path_);
+				filename.append(filename_st.str());
+				filename.append(".pcd");
+				pcl::io::savePCDFileASCII(filename, *cloud_all_filtered);
+				ROS_INFO_STREAM("Save File to" << filename);
+			}
+			if(cloud_all_filtered->points.size() > 1){
+				pcl::toROSMsg(*cloud_all_filtered, output);
 
-				if(is_save_){
-					std::string filename;
-					std::stringstream filename_st;
-					filename_st << input->header.stamp;
-					filename.append(save_file_path_);
-					filename.append(filename_st.str());
-					filename.append(".pcd");
-					pcl::io::savePCDFileASCII(filename, *cloud_all_filtered);
-					ROS_INFO_STREAM("Save File to" << filename);
-				}
-				else{
-					cloud_all_filtered->erase(cloud_all_filtered->begin()+1, cloud_all_filtered->end());
-				}
-				if(cloud_all_filtered->points.size() > 1){
-					pcl::toROSMsg(*cloud_all_filtered, output);
+				//Add header to output cloud
+				output.header = input->header;
+				output.header.frame_id = robot_frame_;
 
-					//Add header to output cloud
-					output.header = input->header;
-					output.header.frame_id = robot_frame_;
-
-					pub_.publish(output);
-				}
+				pub_.publish(output);
 			}
 		}
 	}
