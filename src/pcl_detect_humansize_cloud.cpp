@@ -90,8 +90,8 @@ ExtractHumansizeCloud::ExtractHumansizeCloud(ros::NodeHandle nh)
 	private_nh.param("max_target_width", max_target_width_, 1.2);
 	private_nh.param("min_target_depth", min_target_depth_, 0.4);
 	private_nh.param("max_target_depth", max_target_depth_, 1.2);
-	private_nh.param("min_target_height", min_target_height_, 1.0);
-	private_nh.param("max_target_height", max_target_height_, 2.0);
+	private_nh.param("min_target_height", min_target_height_, 0.5);
+	private_nh.param("max_target_height", max_target_height_, 1.5);
 
 	tf_listener_ = new tf::TransformListener();
 
