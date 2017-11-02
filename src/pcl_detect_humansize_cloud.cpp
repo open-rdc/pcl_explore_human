@@ -35,6 +35,7 @@ class ExtractHumansizeCloud{
 		tf::TransformListener *tf_listener_;
 		ros::Publisher pub_;
 		ros::Subscriber sub_;
+		ros::Publisher pub2_;
 
 		bool is_save_;
 
@@ -65,6 +66,7 @@ class ExtractHumansizeCloud{
 ExtractHumansizeCloud::ExtractHumansizeCloud(ros::NodeHandle nh)
 {
 	pub_ = nh.advertise<sensor_msgs::PointCloud2> ("output_humansize_cloud", 1);
+	pub2_ = nh.advertise<sensor_msgs::PointCloud2> ("output_cloud", 1);
 	sub_ = nh.subscribe ("hokuyo3d/hokuyo_cloud2", 0, &ExtractHumansizeCloud::cloud_cb, this);
 
 	ros::NodeHandle private_nh("~");
@@ -75,8 +77,8 @@ ExtractHumansizeCloud::ExtractHumansizeCloud(ros::NodeHandle nh)
 	private_nh.param("outlier_removal_meanK", outlier_mean_, 10.0);
 	private_nh.param("outlier_removal_StddevMulThresh", outlier_thresh_, 0.25);
 	private_nh.param("horizon_field_name", pass_fieldname_,std::string("z"));
-	private_nh.param("max_horizontal_height",max_horizontal_height_,0.0);
-	private_nh.param("min_horizontal_height",min_horizontal_height_,-2.0);
+	private_nh.param("max_horizontal_height",max_horizontal_height_,0.05);
+	private_nh.param("min_horizontal_height",min_horizontal_height_, -20.0);
 	private_nh.param("cluster_tolerance", cluster_tolerance_, 0.2);
 	private_nh.param("min_cluster_size",min_cluster_size_,10);
 	private_nh.param("max_cluster_size",max_cluster_size_,1000000);
@@ -87,11 +89,11 @@ ExtractHumansizeCloud::ExtractHumansizeCloud(ros::NodeHandle nh)
 	private_nh.param("search_range", search_range_, 7.5);
 	private_nh.param("save_file_path", save_file_path_, std::string("~/"));
 	private_nh.param("min_target_width", min_target_width_, 0.4);
-	private_nh.param("max_target_width", max_target_width_, 1.2);
+	private_nh.param("max_target_width", max_target_width_, 1.6);
 	private_nh.param("min_target_depth", min_target_depth_, 0.4);
-	private_nh.param("max_target_depth", max_target_depth_, 1.2);
-	private_nh.param("min_target_height", min_target_height_, 0.5);
-	private_nh.param("max_target_height", max_target_height_, 1.5);
+	private_nh.param("max_target_depth", max_target_depth_, 1.6);
+	private_nh.param("min_target_height", min_target_height_, 0.3);
+	private_nh.param("max_target_height", max_target_height_, 2.0);
 
 	tf_listener_ = new tf::TransformListener();
 
@@ -163,10 +165,20 @@ void ExtractHumansizeCloud::cloud_cb(const sensor_msgs::PointCloud2Ptr& input)
 
 	//Pass Through Horizon
 	pcl::PassThrough<pcl::PointXYZI> pass;
+        pass.setInputCloud(cloud_boxel);
 	pass.setFilterLimitsNegative(true);
 	pass.setFilterFieldName(pass_fieldname_);
 	pass.setFilterLimits(min_horizontal_height_,max_horizontal_height_);
 	pass.filter(*cloud_boxel);
+
+
+				pcl::toROSMsg(*cloud_boxel, output);
+
+				//Add header to output cloud
+				output.header = input->header;
+				output.header.frame_id = robot_frame_;
+
+				pub2_.publish(output);
 
 	//Make tree structure
 	tree->setInputCloud(cloud_boxel);
