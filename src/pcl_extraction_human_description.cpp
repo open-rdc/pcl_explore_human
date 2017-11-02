@@ -304,7 +304,7 @@ void cloud_cb (const sensor_msgs::PointCloud2Ptr& input)
 		std::cout << "scaled description :";
 		int index = 0;
 		for(int i=0;i<description.size();i++){
-			if(i<24 || i>28){
+			if(i<24 || i>27){
 				if(description[i] == DBL_INF || description[i] == DBL_MINF){
 					description[i] = 0;
 				}
