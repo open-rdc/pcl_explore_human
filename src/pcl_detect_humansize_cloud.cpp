@@ -73,7 +73,7 @@ ExtractHumansizeCloud::ExtractHumansizeCloud(ros::NodeHandle nh)
 	
 	private_nh.param("is_save", is_save_, false);
 	private_nh.param("robot_frame", robot_frame_, std::string("/base_link"));
-	private_nh.param("voxel_gird_resolution", voxel_resolution_, 0.15);
+	private_nh.param("voxel_gird_resolution", voxel_resolution_, 0.10);
 	private_nh.param("outlier_removal_meanK", outlier_mean_, 10.0);
 	private_nh.param("outlier_removal_StddevMulThresh", outlier_thresh_, 0.25);
 	private_nh.param("horizon_field_name", pass_fieldname_,std::string("z"));
@@ -165,20 +165,19 @@ void ExtractHumansizeCloud::cloud_cb(const sensor_msgs::PointCloud2Ptr& input)
 
 	//Pass Through Horizon
 	pcl::PassThrough<pcl::PointXYZI> pass;
-        pass.setInputCloud(cloud_boxel);
+	pass.setInputCloud(cloud_boxel);
 	pass.setFilterLimitsNegative(true);
 	pass.setFilterFieldName(pass_fieldname_);
 	pass.setFilterLimits(min_horizontal_height_,max_horizontal_height_);
 	pass.filter(*cloud_boxel);
+	
+	pcl::toROSMsg(*cloud_boxel, output);
 
+	//Add header to output cloud
+	output.header = input->header;
+	output.header.frame_id = robot_frame_;
 
-				pcl::toROSMsg(*cloud_boxel, output);
-
-				//Add header to output cloud
-				output.header = input->header;
-				output.header.frame_id = robot_frame_;
-
-				pub2_.publish(output);
+	pub2_.publish(output);
 
 	//Make tree structure
 	tree->setInputCloud(cloud_boxel);
