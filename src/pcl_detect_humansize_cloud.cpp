@@ -21,6 +21,7 @@
 
 #include <sys/time.h>
 
+
 class ExtractHumansizeCloud{
 	public:
 		ExtractHumansizeCloud(ros::NodeHandle nh);
@@ -69,32 +70,54 @@ ExtractHumansizeCloud::ExtractHumansizeCloud(ros::NodeHandle nh)
 
 	ros::NodeHandle private_nh("~");
 	
-	private_nh.param("is_save", is_save_, false);
-	private_nh.param("robot_frame", robot_frame_, std::string("/base_link"));
-	private_nh.param("voxel_gird_resolution", voxel_resolution_, 0.10);
-	private_nh.param("outlier_removal_meanK", outlier_mean_, 10.0);
-	private_nh.param("outlier_removal_StddevMulThresh", outlier_thresh_, 0.25);
-	private_nh.param("horizon_field_name", pass_fieldname_,std::string("z"));
-	private_nh.param("max_horizontal_height",max_horizontal_height_,0.05);
-	private_nh.param("min_horizontal_height",min_horizontal_height_, -20.0);
-	private_nh.param("cluster_tolerance", cluster_tolerance_, 0.2);
-	private_nh.param("min_cluster_size",min_cluster_size_,10);
-	private_nh.param("max_cluster_size",max_cluster_size_,1000000);
-	private_nh.param("intensity_threshold", intensity_threshold_, 2000);
-	private_nh.param("min_intensity_threshold", min_intensity_threshold_, 1200);
-	private_nh.param("intensity_decrease", intensity_decrease_, 200);
-	private_nh.param("inner_high_intensities", min_inner_high_intensities_, 1);
-	private_nh.param("search_range", search_range_, 7.5);
-	private_nh.param("save_file_path", save_file_path_, std::string("~/"));
-	private_nh.param("min_target_width", min_target_width_, 0.4);
-	private_nh.param("max_target_width", max_target_width_, 1.6);
-	private_nh.param("min_target_depth", min_target_depth_, 0.4);
-	private_nh.param("max_target_depth", max_target_depth_, 1.6);
-	private_nh.param("min_target_height", min_target_height_, 0.3);
-	private_nh.param("max_target_height", max_target_height_, 2.0);
+	private_nh.getParam("is_save", is_save_);
+	private_nh.getParam("robot_frame", robot_frame_);
+	private_nh.getParam("voxel_resolution", voxel_resolution_);
+	private_nh.getParam("outlier_removal_meanK", outlier_mean_);
+	private_nh.getParam("outlier_removal_StddevMulThresh", outlier_thresh_);
+	private_nh.getParam("max_horizontal_height",max_horizontal_height_);
+	private_nh.getParam("min_horizontal_height",min_horizontal_height_);
+	private_nh.getParam("cluster_tolerance", cluster_tolerance_);
+	private_nh.getParam("min_cluster_size",min_cluster_size_);
+	private_nh.getParam("max_cluster_size",max_cluster_size_);
+	private_nh.getParam("intensity_threshold", intensity_threshold_);
+	private_nh.getParam("min_intensity_threshold", min_intensity_threshold_);
+	private_nh.getParam("intensity_decrease", intensity_decrease_);
+	private_nh.getParam("inner_high_intensities", min_inner_high_intensities_);
+	private_nh.getParam("search_range", search_range_);
+	private_nh.getParam("save_file_path", save_file_path_);
+	private_nh.getParam("min_target_width", min_target_width_);
+	private_nh.getParam("max_target_width", max_target_width_);
+	private_nh.getParam("min_target_depth", min_target_depth_);
+	private_nh.getParam("max_target_depth", max_target_depth_);
+	private_nh.getParam("min_target_height", min_target_height_);
+	private_nh.getParam("max_target_height", max_target_height_);
 
 	tf_listener_ = new tf::TransformListener();
 
+	ROS_INFO("is_save=%d",is_save_);
+	ROS_INFO("voxel_resolution=%lf",voxel_resolution_);
+	ROS_INFO("outlier_mean=%lf",outlier_mean_);
+	ROS_INFO("outlier_thresh=%lf",outlier_thresh_);
+	ROS_INFO("max_horizontal_height=%lf",max_horizontal_height_);
+	ROS_INFO("min_horizontal_height=%lf",min_horizontal_height_);
+	ROS_INFO("cluster_tolerance=%lf",cluster_tolerance_);
+	ROS_INFO("min_cluster_size=%d",min_cluster_size_);
+	ROS_INFO("max_cluster_size=%d",max_cluster_size_);
+	ROS_INFO("intensity_threshold=%d",intensity_threshold_);
+	ROS_INFO("min_intensity_threshold=%d",min_intensity_threshold_);
+	ROS_INFO("intensity_decrease=%d",intensity_decrease_);
+	ROS_INFO("min_inner_high_intensities=%d",min_inner_high_intensities_);
+	ROS_INFO("search_range=%lf",search_range_);
+	ROS_INFO("min_target_width=%lf",min_target_width_);
+	ROS_INFO("max_target_width=%lf",max_target_width_);
+	ROS_INFO("min_target_depth=%lf",min_target_depth_);
+	ROS_INFO("max_target_depth=%lf",max_target_depth_);
+	ROS_INFO("min_target_height=%lf",min_target_height_);
+	ROS_INFO("max_target_height=%lf",max_target_height_);
+	std::cout<<robot_frame_<<std::endl;
+	std::cout<<save_file_path_<<std::endl;
+	
 	ros::spin();
 }
 
@@ -165,7 +188,7 @@ void ExtractHumansizeCloud::cloud_cb(const sensor_msgs::PointCloud2Ptr& input)
 	pcl::PassThrough<pcl::PointXYZI> pass;
 	pass.setInputCloud(cloud_boxel);
 	pass.setFilterLimitsNegative(true);
-	pass.setFilterFieldName(pass_fieldname_);
+	pass.setFilterFieldName("z");
 	pass.setFilterLimits(min_horizontal_height_,max_horizontal_height_);
 	pass.filter(*cloud_boxel);
 	
