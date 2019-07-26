@@ -12,8 +12,6 @@
 #include <pcl/segmentation/conditional_euclidean_clustering.h>
 #include <pcl/segmentation/extract_clusters.h>
 #include <pcl/segmentation/impl/conditional_euclidean_clustering.hpp>
-#include <pcl/sample_consensus/method_types.h>
-#include <pcl/sample_consensus/model_types.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/statistical_outlier_removal.h>
