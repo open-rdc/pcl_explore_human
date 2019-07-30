@@ -1,30 +1,19 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(pcl_explore_human)
-set(CMAKE_CXX_FLAGS "-march=native -O1 -std=c++11")
-set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS   "-march=native -O1")
-set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "-march=native -O1")
-set(CMAKE_EXE_LINKER_FLAGS "-march=native -O1")
-# SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
+## Compile as C++11, supported in ROS Kinetic and newer
+# add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  geometry_msgs
-  roscpp
-  rospy
-  std_msgs
-  pcl_ros
-  sensor_msgs
   pcl_conversions
-  pcl_msgs
-  move_base_msgs
-  move_base
+  pcl_ros
+  roscpp
+  sensor_msgs
   tf
-  cmake_modules
 )
-find_package(Eigen3 REQUIRED)
-add_definitions(${Eigen3_DEFINITIONS})
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -44,11 +33,11 @@ add_definitions(${Eigen3_DEFINITIONS})
 ## * Let MSG_DEP_SET be the set of packages whose message types you use in
 ##   your messages/services/actions (e.g. std_msgs, actionlib_msgs, ...).
 ## * In the file package.xml:
-##   * add a build_depend and a run_depend tag for each package in MSG_DEP_SET
-##   * If MSG_DEP_SET isn't empty the following dependencies might have been
-##     pulled in transitively but can be declared for certainty nonetheless:
-##     * add a build_depend tag for "message_generation"
-##     * add a run_depend tag for "message_runtime"
+##   * add a build_depend tag for "message_generation"
+##   * add a build_depend and a exec_depend tag for each package in MSG_DEP_SET
+##   * If MSG_DEP_SET isn't empty the following dependency has been pulled in
+##     but can be declared for certainty nonetheless:
+##     * add a exec_depend tag for "message_runtime"
 ## * In this file (CMakeLists.txt):
 ##   * add "message_generation" and every package in MSG_DEP_SET to
 ##     find_package(catkin REQUIRED COMPONENTS ...)
@@ -83,7 +72,27 @@ add_definitions(${Eigen3_DEFINITIONS})
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
-#   geometry_msgs#   std_msgs
+#   sensor_msgs
+# )
+
+################################################
+## Declare ROS dynamic reconfigure parameters ##
+################################################
+
+## To declare and build dynamic reconfigure parameters within this
+## package, follow these steps:
+## * In the file package.xml:
+##   * add a build_depend and a exec_depend tag for "dynamic_reconfigure"
+## * In this file (CMakeLists.txt):
+##   * add "dynamic_reconfigure" to
+##     find_package(catkin REQUIRED COMPONENTS ...)
+##   * uncomment the "generate_dynamic_reconfigure_options" section below
+##     and list every .cfg file to be processed
+
+## Generate dynamic reconfigure parameters in the 'cfg' folder
+# generate_dynamic_reconfigure_options(
+#   cfg/DynReconf1.cfg
+#   cfg/DynReconf2.cfg
 # )
 
 ###################################
@@ -91,14 +100,14 @@ add_definitions(${Eigen3_DEFINITIONS})
 ###################################
 ## The catkin_package macro generates cmake config files for your package
 ## Declare things to be passed to dependent projects
-## INCLUDE_DIRS: uncomment this if you package contains header files
+## INCLUDE_DIRS: uncomment this if your package contains header files
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES pcl_explore_human
-#  CATKIN_DEPENDS geometry_msgs roscpp rospy std_msgs
+#  LIBRARIES my_pcl_tutorial
+#  CATKIN_DEPENDS pcl_conversions pcl_ros roscpp sensor_msgs
 #  DEPENDS system_lib
 )
 
@@ -108,30 +117,42 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-# include_directories(include)
 include_directories(
-  ${catkin_INCLUDE_DIRS} include
-  ${Eigen3_INCLUDE_DIRS}
+# include
+  ${catkin_INCLUDE_DIRS}
 )
 
-## Declare a cpp library
-# add_library(pcl_explore_human
-#   src/${PROJECT_NAME}/pcl_explore_human.cpp
+## Declare a C++ library
+# add_library(${PROJECT_NAME}
+#   src/${PROJECT_NAME}/my_pcl_tutorial.cpp
 # )
 
-## Declare a cpp executable
-add_executable(pcl_detect_humansize_cloud src/pcl_detect_humansize_cloud.cpp)
-add_executable(pcl_extraction_human_description src/pcl_extraction_human_description.cpp src/svm.cpp)
-add_executable(targetpoint_sender src/targetpoint_sender.cpp)
+## Add cmake target dependencies of the library
+## as an example, code may need to be generated before libraries
+## either from message generation or dynamic reconfigure
+# add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-## Add cmake target dependencies of the executable/library
-## as an example, message headers may need to be generated before nodes
-# add_dependencies(pcl_explore_human_node 495_pcl_generate_messages_cpp)
+## Declare a C++ executable
+## With catkin_make all packages are built within a single CMake context
+## The recommended prefix ensures that target names across packages don't collide
+# add_executable(${PROJECT_NAME}_node src/my_pcl_tutorial_node.cpp)
+add_executable(pcl_detect_humansize_cloud src/pcl_detect_humansize_cloud.cpp)
+target_link_libraries(pcl_detect_humansize_cloud ${catkin_LIBRARIES})
+## Rename C++ executable without prefix
+## The above recommended prefix causes long target names, the following renames the
+## target back to the shorter version for ease of user use
+## e.g. "rosrun someones_pkg node" instead of "rosrun someones_pkg someones_pkg_node"
+# set_target_properties(${PROJECT_NAME}_node PROPERTIES OUTPUT_NAME node PREFIX "")
+
+## Add cmake target dependencies of the executable
+## same as for the library above
+# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(pcl_detect_humansize_cloud ${catkin_LIBRARIES})
-target_link_libraries(pcl_extraction_human_description ${catkin_LIBRARIES})
-target_link_libraries(targetpoint_sender ${catkin_LIBRARIES})
+# target_link_libraries(${PROJECT_NAME}_node
+#   ${catkin_LIBRARIES}
+# )
+
 #############
 ## Install ##
 #############
@@ -147,7 +168,7 @@ target_link_libraries(targetpoint_sender ${catkin_LIBRARIES})
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS pcl_explore_human 495_pcl_node
+# install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -172,7 +193,7 @@ target_link_libraries(targetpoint_sender ${catkin_LIBRARIES})
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_pcl_explore_human.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_my_pcl_tutorial.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

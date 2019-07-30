@@ -1,19 +1,15 @@
-is_save: false
-robot_frame: /base_link
+robot_frame: base_link
+lrf_frame: hokuyo3d/hokuyo_cloud2
 voxel_resolution: 0.1
-outlier_removal_meanK: 10.0
-outlier_removal_StddevMulThresh: 0.25
-max_horizontal_height: 0.05
-min_horizontal_height: -20.0
-cluster_tolerance: 0.20
-min_cluster_size: 10
-max_cluster_size: 1000000
-intensity_threshold: 2000
-min_intensity_threshold: 1200
-intensity_decrease: 200
-inner_high_intensities: 1
+outlier_mean: 10
+outlier_threshold: 0.25
 search_range: 7.5
-save_file_path: ~/
+min_horizontal_height: -20
+max_horizontal_height: 0.05
+cluster_tolerance: 0.2
+min_cluster_size: 10
+max_cluster_size: 100000
+
 min_target_width: 0.4
 max_target_width: 1.6
 min_target_depth: 0.4
@@ -21,5 +17,5 @@ max_target_depth: 1.6
 min_target_height: 0.3
 max_target_height: 2.0
 
-
-
+save_to_pcd: true
+save_file_path: /home/taishi/pcd_data

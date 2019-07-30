@@ -1,239 +1,208 @@
-// +ROS specific includes
 #include <ros/ros.h>
-#include <sensor_msgs/PointCloud2.h>
 #include <tf/transform_listener.h>
-#include <pcl_ros/point_cloud.h>
 #include <pcl_ros/transforms.h>
+#include <sensor_msgs/PointCloud2.h>
 // PCL specific includes
-#include <pcl_conversions/pcl_conversions.h>
 #include <pcl/io/pcd_io.h>
+#include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-#include <pcl/segmentation/conditional_euclidean_clustering.h>
+
+#include <pcl/kdtree/kdtree.h>
+
 #include <pcl/segmentation/extract_clusters.h>
-#include <pcl/segmentation/impl/conditional_euclidean_clustering.hpp>
-#include <pcl/filters/extract_indices.h>
+
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/filters/passthrough.h>
-#include <pcl/features/normal_3d.h>
-#include <pcl/PCLPointCloud2.h>
 
-#include <sys/time.h>
+#include <iostream>
+#include <string>
+#include <sstream>
 
+
+void pass_through_filter(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud,bool LimitsNegative,const std::string &FieldName,float min_Limits,float max_Limits){
+  pcl::PassThrough<pcl::PointXYZI> pass_x;
+	pass_x.setInputCloud(cloud);
+	pass_x.setFilterLimitsNegative(LimitsNegative);
+	pass_x.setFilterFieldName(FieldName);
+	pass_x.setFilterLimits(min_Limits,max_Limits);
+	pass_x.filter(*cloud);
+};
 
 class ExtractHumansizeCloud{
-	public:
-		ExtractHumansizeCloud(ros::NodeHandle nh);
-		void cloud_cb(const sensor_msgs::PointCloud2Ptr& input);
-	private:
-		std::string robot_frame_;
-		std::string pass_fieldname_;
-		std::string save_file_path_;
+  public:
+    ExtractHumansizeCloud(){
 
-		tf::TransformListener *tf_listener_;
-		ros::Publisher pub_;
-		ros::Subscriber sub_;
-		ros::Publisher pub2_;
+      ros::NodeHandle private_nh_("~");
+     
+      private_nh_.getParam("robot_frame",robot_frame_);
+      private_nh_.getParam("lrf_frame",lrf_frame_);
+      private_nh_.getParam("voxel_resolution",voxel_resolution_);
+      private_nh_.getParam("outlier_mean",outlier_mean_);
+      private_nh_.getParam("outlier_threshold",outlier_threshold_);
+      private_nh_.getParam("search_range",search_range_);
+      private_nh_.getParam("min_horizontal_height",min_horizontal_height_);
+      private_nh_.getParam("max_horizontal_height",max_horizontal_height_);
+      private_nh_.getParam("cluster_tolerance",cluster_tolerance_);
+      private_nh_.getParam("min_cluster_size",min_cluster_size_);
+      private_nh_.getParam("max_cluster_size",max_cluster_size_);
+      private_nh_.getParam("min_target_width",min_target_width_);
+      private_nh_.getParam("max_target_width",max_target_width_);
+      private_nh_.getParam("min_target_depth",min_target_depth_);
+      private_nh_.getParam("max_target_depth",max_target_depth_);
+      private_nh_.getParam("min_target_height",min_target_height_);
+      private_nh_.getParam("max_target_height",max_target_height_);
+      private_nh_.getParam("save_to_pcd", save_to_pcd_);
+      private_nh_.getParam("save_file_path",save_file_path_);
 
-		bool is_save_;
+      sub_ = nh_.subscribe<sensor_msgs::PointCloud2> (lrf_frame_, 1, &ExtractHumansizeCloud::cloud_cb,this);
+      pub_ = nh_.advertise<sensor_msgs::PointCloud2> ("output_filter_cloud", 1);
+      pub2_ = nh_.advertise<sensor_msgs::PointCloud2> ("output_humansize_cloud", 1);
+      tf_listener_ = new tf::TransformListener();
 
-		double voxel_resolution_;
+    }
+  
+  private:
+
+    void cloud_cb(const sensor_msgs::PointCloud2ConstPtr& cloud_msg);
+
+    ros::NodeHandle nh_;
+    ros::Subscriber sub_;
+    ros::Publisher pub_;
+    ros::Publisher pub2_;
+
+    tf::TransformListener *tf_listener_;
+    
+    std::string robot_frame_;
+    std::string lrf_frame_;
+
+    double voxel_resolution_;
 		double outlier_mean_;
-		double outlier_thresh_;
-		double max_horizontal_height_;
+		double outlier_threshold_;
+    double search_range_;
 		double min_horizontal_height_;
+		double max_horizontal_height_;
 		double cluster_tolerance_;
-
-		double min_target_width_;
-		double max_target_width_;
-		double min_target_depth_;
-		double max_target_depth_;
-		double min_target_height_;
-		double max_target_height_;
-		double search_range_;
-
-		int intensity_threshold_;
-		int min_intensity_threshold_;
-		int intensity_decrease_;
-		int min_inner_high_intensities_;
-		int min_cluster_size_;
+    int min_cluster_size_;
 		int max_cluster_size_;
+
+    double min_target_width_;
+    double max_target_width_;
+    double min_target_depth_;
+    double max_target_depth_;
+    double min_target_height_;
+    double max_target_height_;
+
+    bool save_to_pcd_;
+    std::string save_file_path_;
+    
 
 };
 
-ExtractHumansizeCloud::ExtractHumansizeCloud(ros::NodeHandle nh)
+void 
+ExtractHumansizeCloud::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
 {
-	pub_ = nh.advertise<sensor_msgs::PointCloud2> ("output_humansize_cloud", 1);
-	pub2_ = nh.advertise<sensor_msgs::PointCloud2> ("output_cloud", 1);
-	sub_ = nh.subscribe ("hokuyo3d/hokuyo_cloud2", 0, &ExtractHumansizeCloud::cloud_cb, this);
+  //transform cloud
+  tf::StampedTransform transform;
+  sensor_msgs::PointCloud2 transformed_cloud;
 
-	ros::NodeHandle private_nh("~");
-	
-	private_nh.getParam("is_save", is_save_);
-	private_nh.getParam("robot_frame", robot_frame_);
-	private_nh.getParam("voxel_resolution", voxel_resolution_);
-	private_nh.getParam("outlier_removal_meanK", outlier_mean_);
-	private_nh.getParam("outlier_removal_StddevMulThresh", outlier_thresh_);
-	private_nh.getParam("max_horizontal_height",max_horizontal_height_);
-	private_nh.getParam("min_horizontal_height",min_horizontal_height_);
-	private_nh.getParam("cluster_tolerance", cluster_tolerance_);
-	private_nh.getParam("min_cluster_size",min_cluster_size_);
-	private_nh.getParam("max_cluster_size",max_cluster_size_);
-	private_nh.getParam("intensity_threshold", intensity_threshold_);
-	private_nh.getParam("min_intensity_threshold", min_intensity_threshold_);
-	private_nh.getParam("intensity_decrease", intensity_decrease_);
-	private_nh.getParam("inner_high_intensities", min_inner_high_intensities_);
-	private_nh.getParam("search_range", search_range_);
-	private_nh.getParam("save_file_path", save_file_path_);
-	private_nh.getParam("min_target_width", min_target_width_);
-	private_nh.getParam("max_target_width", max_target_width_);
-	private_nh.getParam("min_target_depth", min_target_depth_);
-	private_nh.getParam("max_target_depth", max_target_depth_);
-	private_nh.getParam("min_target_height", min_target_height_);
-	private_nh.getParam("max_target_height", max_target_height_);
-
-	tf_listener_ = new tf::TransformListener();
-
-	ROS_INFO("is_save=%d",is_save_);
-	ROS_INFO("voxel_resolution=%lf",voxel_resolution_);
-	ROS_INFO("outlier_mean=%lf",outlier_mean_);
-	ROS_INFO("outlier_thresh=%lf",outlier_thresh_);
-	ROS_INFO("max_horizontal_height=%lf",max_horizontal_height_);
-	ROS_INFO("min_horizontal_height=%lf",min_horizontal_height_);
-	ROS_INFO("cluster_tolerance=%lf",cluster_tolerance_);
-	ROS_INFO("min_cluster_size=%d",min_cluster_size_);
-	ROS_INFO("max_cluster_size=%d",max_cluster_size_);
-	ROS_INFO("intensity_threshold=%d",intensity_threshold_);
-	ROS_INFO("min_intensity_threshold=%d",min_intensity_threshold_);
-	ROS_INFO("intensity_decrease=%d",intensity_decrease_);
-	ROS_INFO("min_inner_high_intensities=%d",min_inner_high_intensities_);
-	ROS_INFO("search_range=%lf",search_range_);
-	ROS_INFO("min_target_width=%lf",min_target_width_);
-	ROS_INFO("max_target_width=%lf",max_target_width_);
-	ROS_INFO("min_target_depth=%lf",min_target_depth_);
-	ROS_INFO("max_target_depth=%lf",max_target_depth_);
-	ROS_INFO("min_target_height=%lf",min_target_height_);
-	ROS_INFO("max_target_height=%lf",max_target_height_);
-	std::cout<<robot_frame_<<std::endl;
-	std::cout<<save_file_path_<<std::endl;
-	
-	ros::spin();
-}
-
-void ExtractHumansizeCloud::cloud_cb(const sensor_msgs::PointCloud2Ptr& input)
-{
-	// Create a container for the data.
-	sensor_msgs::PointCloud2 transformed_cloud;
-	sensor_msgs::PointCloud2 output;
-	pcl::search::KdTree<pcl::PointXYZI>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZI>);
-	pcl::PointCloud<pcl::PointXYZI>::Ptr conv_input(new pcl::PointCloud<pcl::PointXYZI>());
-	pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_boxel(new pcl::PointCloud<pcl::PointXYZI>());
-
-	// Transform pointcloud from LIDAR fixed link to base_link
-	tf::StampedTransform transform;
 	try{
-		tf_listener_->waitForTransform(robot_frame_, input->header.frame_id, ros::Time(), ros::Duration(100.0));
+		tf_listener_->waitForTransform(robot_frame_, cloud_msg->header.frame_id, ros::Time(0), ros::Duration(100.0));
 	}catch(tf::TransformException ex){
 		ROS_ERROR("%s",ex.what());
 	}
 	
-	if(!pcl_ros::transformPointCloud(robot_frame_, *input, 	transformed_cloud, *tf_listener_)){
+	if(!pcl_ros::transformPointCloud(robot_frame_, *cloud_msg, transformed_cloud, *tf_listener_)){
 		return;
 	}
+  
+  //pcl to rosmsg
+  pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>());
+  pcl::fromROSMsg (transformed_cloud, *cloud);
+  
+  //filter container
+  pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_boxel(new pcl::PointCloud<pcl::PointXYZI>());
 
-	//Conversion PointCloud2 intensity field name to PointXYZI intensity field name.
-	transformed_cloud.fields[3].name = "intensity";
-	pcl::fromROSMsg(transformed_cloud, *conv_input);
-
-	bool has_high_intensity = false;
-	int high_intensity_cnt = 0;
-	pcl::PointCloud<pcl::PointXYZI> high_intensities;
-	int intensity_threshold = intensity_threshold_;
-	while(!has_high_intensity){
-		for(auto& i:conv_input->points){
-			if(
-				(i.intensity > intensity_threshold) &&
-				(i.x < search_range_) &&
-				(i.y > -search_range_) &&
-				(i.y < search_range_)
-			){
-				high_intensity_cnt++;
-				has_high_intensity = true;
-				high_intensities.push_back(i);
-			}
-		}
-		if((!has_high_intensity) && (intensity_threshold >= min_intensity_threshold_)){
-			intensity_threshold -= 200;
-		}else if(intensity_threshold <= min_intensity_threshold_){
-			return;
-		}
-	}
-
-	// Voxel Grid
+  // Voxel Grid
 	pcl::VoxelGrid<pcl::PointXYZI> vg;
-	vg.setInputCloud(conv_input);
+	vg.setInputCloud(cloud);
 	vg.setLeafSize(voxel_resolution_,voxel_resolution_,voxel_resolution_);
 	vg.setDownsampleAllData(true);
 	vg.filter(*cloud_boxel);
 
-	// Satistical Outlier Removal
+  // Satistical Outlier Removal
 	pcl::StatisticalOutlierRemoval<pcl::PointXYZI> sor;
 	sor.setInputCloud(cloud_boxel);
 	sor.setMeanK(outlier_mean_);
-	sor.setStddevMulThresh(outlier_thresh_);
+	sor.setStddevMulThresh(outlier_threshold_);
 	sor.filter(*cloud_boxel);
 
-	//Pass Through Horizon
-	pcl::PassThrough<pcl::PointXYZI> pass;
-	pass.setInputCloud(cloud_boxel);
-	pass.setFilterLimitsNegative(true);
-	pass.setFilterFieldName("z");
-	pass.setFilterLimits(min_horizontal_height_,max_horizontal_height_);
-	pass.filter(*cloud_boxel);
-	
-	pcl::toROSMsg(*cloud_boxel, output);
+  //Pass through filter
+  pass_through_filter(cloud_boxel,false,"x",-search_range_,search_range_);
+  pass_through_filter(cloud_boxel,false,"y",-search_range_,search_range_);
+  pass_through_filter(cloud_boxel,true,"z",min_horizontal_height_,max_horizontal_height_);
 
-	//Add header to output cloud
-	output.header = input->header;
-	output.header.frame_id = robot_frame_;
+  //Pass Through Horizon X
+  /* 
+	pcl::PassThrough<pcl::PointXYZI> pass_x;
+	pass_x.setInputCloud(cloud_boxel);
+	pass_x.setFilterLimitsNegative(false);
+	pass_x.setFilterFieldName("x");
+	pass_x.setFilterLimits(-search_range_,search_range_);
+	pass_x.filter(*cloud_boxel);
 
-	pub2_.publish(output);
+  //Pass Through Horizon Y
+	pcl::PassThrough<pcl::PointXYZI> pass_y;
+	pass_y.setInputCloud(cloud_boxel);
+	pass_y.setFilterLimitsNegative(false);
+	pass_y.setFilterFieldName("y");
+	pass_y.setFilterLimits(-search_range_,search_range_);
+	pass_y.filter(*cloud_boxel);
+  
+  //Pass Through Horizon Z
+	pcl::PassThrough<pcl::PointXYZI> pass_z;
+	pass_z.setInputCloud(cloud_boxel);
+	pass_z.setFilterLimitsNegative(true);
+	pass_z.setFilterFieldName("z");
+	pass_z.setFilterLimits(-20.0,0.05);
+	pass_z.filter(*cloud_boxel);
+*/
+  // Convert to ROS data type
+  sensor_msgs::PointCloud2 output_filter_cloud;
+  pcl::toROSMsg(*cloud_boxel, output_filter_cloud);
 
-	//Make tree structure
-	tree->setInputCloud(cloud_boxel);
+  // Publish the data
+  pub_.publish (output_filter_cloud);
 
-	//Clustering
-	std::vector<pcl::PointIndices> cluster_indices;
-	pcl::EuclideanClusterExtraction<pcl::PointXYZI> ec;
-	ec.setClusterTolerance(cluster_tolerance_);
-	ec.setMinClusterSize(min_cluster_size_);
-	ec.setMaxClusterSize(max_cluster_size_);
-	ec.setSearchMethod(tree);
-	ec.setInputCloud(cloud_boxel);
-	ec.extract(cluster_indices);
+	// Creating the KdTree object for the search method of the extraction
+  pcl::search::KdTree<pcl::PointXYZI>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZI>);
+  tree->setInputCloud (cloud_boxel);
 
-	//Extract from size and intensity
-	int now_cluster;
-	for(std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin(); it != cluster_indices.end(); ++it)
-	{
-		pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_all_filtered(new pcl::PointCloud<pcl::PointXYZI>());
-		double min_point[3];
-		double max_point[3];
-		pcl::PointXYZI min_pt, max_pt;
-		int now_point;
-		bool is_highIntensity = false;
+  std::vector<pcl::PointIndices> cluster_indices;
+  pcl::EuclideanClusterExtraction<pcl::PointXYZI> ec;
+  ec.setClusterTolerance (cluster_tolerance_); // 20cm
+  ec.setMinClusterSize (min_cluster_size_);
+  ec.setMaxClusterSize (max_cluster_size_);
+  ec.setSearchMethod (tree);
+  ec.setInputCloud (cloud_boxel);
+  ec.extract (cluster_indices);
 
-		// Now iterator count
-		now_cluster = it - cluster_indices.begin();
+  int j=0;
 
-		for(std::vector<int>::const_iterator pit = it->indices.begin(); pit != it->indices.end(); pit++)
-		{
-			// Corresponding point copy to cloud_all_filterd
-			cloud_all_filtered->points.push_back(cloud_boxel->points[*pit]);
-			now_point = pit - it->indices.begin();
-			// Measure size of high intensity index
-			if( now_point == 0 ){
+  pcl::PCDWriter writer;
+
+  for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
+  {
+    pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZI>);
+
+    pcl::PointXYZI min_pt, max_pt;
+
+    for (std::vector<int>::const_iterator pit = it->indices.begin(); pit != it->indices.end(); ++pit)
+    {
+      cloud_cluster->points.push_back (cloud_boxel->points[*pit]); //*
+
+      if( pit == it->indices.begin()){
 				min_pt = cloud_boxel -> points[*pit];
 				max_pt = cloud_boxel -> points[*pit];
 			}
@@ -255,69 +224,57 @@ void ExtractHumansizeCloud::cloud_cb(const sensor_msgs::PointCloud2Ptr& input)
 			else if( max_pt.z < cloud_boxel -> points[*pit].z ){
 				max_pt.z = cloud_boxel -> points[*pit].z;
 			}
-		}
 
-		double target_size[3];
-		
-		// Calculation target size
-		target_size[0] = fabs(max_pt.x - min_pt.x);
-		target_size[1] = fabs(max_pt.y - min_pt.y);
-		target_size[2] = fabs(max_pt.z - min_pt.z);
+      double target_size[3];
+      // Calculation target size
+		  target_size[0] = fabs(max_pt.x - min_pt.x);
+		  target_size[1] = fabs(max_pt.y - min_pt.y);
+		  target_size[2] = fabs(max_pt.z - min_pt.z);
 
-		if(    ((target_size[0] < max_target_width_) && (target_size[0] > min_target_width_))
-			&& ((target_size[1] < max_target_depth_) && (target_size[1] > min_target_depth_))
-			&& ((target_size[2] < max_target_height_) && (target_size[2] > min_target_height_))
+      //ROS_INFO("%lf %lf %lf",target_size[0],target_size[1],target_size[2]);
+
+      if(    ((target_size[0] < max_target_width_)  && (target_size[0] > min_target_width_))
+			    && ((target_size[1] < max_target_depth_)  && (target_size[1] > min_target_depth_))
+			    && ((target_size[2] < max_target_height_) && (target_size[2] > min_target_height_))
 			)
-		{
-			int inner_high_intensity_cnt = 0;
-			for(auto& i:high_intensities.points){
-				if(
-					(i.x < max_pt.x) && (i.x > min_pt.x) &&
-					(i.y < max_pt.y) && (i.y > min_pt.y) &&
-					(i.z < max_pt.z) && (i.z > min_pt.z)
-				){
-					inner_high_intensity_cnt++;
-				}
-			}
-			if(inner_high_intensity_cnt < min_inner_high_intensities_){
-				return;
-			}
-			ROS_INFO_STREAM("Find Target");
+		  {
 
-			//Save Process
-			cloud_all_filtered->width = 1;
-			cloud_all_filtered->height = cloud_all_filtered->points.size();
+        cloud_cluster->width = cloud_cluster->points.size ();
+        cloud_cluster->height = 1;
+        cloud_cluster->is_dense = true;
 
-			if(is_save_){
-				std::string filename;
-				std::stringstream filename_st;
-				filename_st << input->header.stamp;
-				filename.append(save_file_path_);
-				filename.append(filename_st.str());
-				filename.append(".pcd");
-				pcl::io::savePCDFileASCII(filename, *cloud_all_filtered);
-				ROS_INFO_STREAM("Save File to" << filename);
-			}
-			if(cloud_all_filtered->points.size() > 1){
-				pcl::toROSMsg(*cloud_all_filtered, output);
+        if(save_to_pcd_ == true){
+          //save process
+          std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
+          std::stringstream ss;
+          ss <<save_file_path_<< "cloud_cluster_" << j << ".pcd";
+          writer.write<pcl::PointXYZI> (ss.str (), *cloud_cluster, false); //*
+          j++;
+        }
 
-				//Add header to output cloud
-				output.header = input->header;
-				output.header.frame_id = robot_frame_;
+        if(cloud_cluster->points.size() > 1){
+          sensor_msgs::PointCloud2 output_humansize_cloud;
+				  pcl::toROSMsg(*cloud_cluster, output_humansize_cloud);
 
-				pub_.publish(output);
-			}
-		}
-	}
+				  //Add header to output cloud
+				  output_humansize_cloud.header = cloud_msg->header;
+				  output_humansize_cloud.header.frame_id = robot_frame_;
+
+				  pub2_.publish(output_humansize_cloud);
+        }
+      }
+    }
+  }
 }
 
-int main(int argc, char** argv)
+int
+main (int argc, char** argv)
 {
-	//Initialize ROS
-	ros::init(argc, argv, "pcl_detect_humansize_cloud");
-	ros::NodeHandle nh;
-	
-	ExtractHumansizeCloud ehc(nh);
+  // Initialize ROS
+  ros::init (argc, argv, "pcl_detect_humansize_cloud");
 
-	return 0;
+  ExtractHumansizeCloud ex;
+  
+  // Spin
+  ros::spin ();
 }
