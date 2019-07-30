@@ -37,7 +37,7 @@ class ExtractHumansizeCloud{
       ros::NodeHandle private_nh_("~");
      
       private_nh_.getParam("robot_frame",robot_frame_);
-      private_nh_.getParam("lrf_frame",lrf_frame_);
+      private_nh_.getParam("lrf_topic",lrf_topic_);
       private_nh_.getParam("voxel_resolution",voxel_resolution_);
       private_nh_.getParam("outlier_mean",outlier_mean_);
       private_nh_.getParam("outlier_threshold",outlier_threshold_);
@@ -56,7 +56,7 @@ class ExtractHumansizeCloud{
       private_nh_.getParam("save_to_pcd", save_to_pcd_);
       private_nh_.getParam("save_file_path",save_file_path_);
 
-      sub_ = nh_.subscribe<sensor_msgs::PointCloud2> (lrf_frame_, 1, &ExtractHumansizeCloud::cloud_cb,this);
+      sub_ = nh_.subscribe<sensor_msgs::PointCloud2> (lrf_topic_, 1, &ExtractHumansizeCloud::cloud_cb,this);
       pub_ = nh_.advertise<sensor_msgs::PointCloud2> ("output_filter_cloud", 1);
       pub2_ = nh_.advertise<sensor_msgs::PointCloud2> ("output_humansize_cloud", 1);
       tf_listener_ = new tf::TransformListener();
@@ -75,7 +75,7 @@ class ExtractHumansizeCloud{
     tf::TransformListener *tf_listener_;
     
     std::string robot_frame_;
-    std::string lrf_frame_;
+    std::string lrf_topic_;
 
     double voxel_resolution_;
 		double outlier_mean_;

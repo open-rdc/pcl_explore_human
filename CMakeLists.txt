@@ -137,7 +137,9 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/my_pcl_tutorial_node.cpp)
 add_executable(pcl_detect_humansize_cloud src/pcl_detect_humansize_cloud.cpp)
+add_executable(pcl_extraction_human_description src/pcl_extraction_human_description)
 target_link_libraries(pcl_detect_humansize_cloud ${catkin_LIBRARIES})
+target_link_libraries(pcl_extraction_human_description ${catkin_LIBRARIES})
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
