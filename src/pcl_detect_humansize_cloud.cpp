@@ -97,7 +97,8 @@ class ExtractHumansizeCloud{
 
     bool save_to_pcd_;
     std::string save_file_path_;
-    
+    std::string filename_;
+    int cluster_number=0;   
 
 };
 
@@ -164,10 +165,6 @@ ExtractHumansizeCloud::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_m
   ec.setInputCloud (cloud_boxel);
   ec.extract (cluster_indices);
 
-  int j=0;
-
-  pcl::PCDWriter writer;
-
   for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
   {
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZI>);
@@ -189,7 +186,7 @@ ExtractHumansizeCloud::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_m
 		target_size[2] = fabs(max_pt.z - min_pt.z);
 
     //ROS_INFO("%lf %lf %lf",target_size[0],target_size[1],target_size[2]);
-
+    
     if(    ((target_size[0] < max_target_width_)  && (target_size[0] > min_target_width_))
 		    && ((target_size[1] < max_target_depth_)  && (target_size[1] > min_target_depth_))
 		    && ((target_size[2] < max_target_height_) && (target_size[2] > min_target_height_))
@@ -202,11 +199,14 @@ ExtractHumansizeCloud::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_m
 
       if(save_to_pcd_ == true){
         //save process
+        pcl::PCDWriter writer;
         std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
         std::stringstream ss;
-        ss <<save_file_path_<< "cloud_cluster_" << j << ".pcd";
-        writer.write<pcl::PointXYZI> (ss.str (), *cloud_cluster, false); //*
-        j++;
+        ss <<save_file_path_<< "cloud_cluster_" << cluster_number << ".pcd";
+        ss >> filename_;
+        std::cout <<"output_humansize_cloud save to "<< filename_ << std::endl;
+        writer.write<pcl::PointXYZI> (ss.str (), *cloud_cluster, false); 
+        cluster_number++;
       }
 
       if(cloud_cluster->points.size() > 1){
