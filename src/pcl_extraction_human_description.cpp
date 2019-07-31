@@ -89,5 +89,7 @@ int main(int argc, char** argv)
 {
     ros::init(argc,argv,"pcl_extraction_human_description");
 
+    ExtractHumanDescription ex;
+
     ros::spin();
 }

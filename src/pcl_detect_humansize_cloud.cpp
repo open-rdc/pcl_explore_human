@@ -7,6 +7,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
+#include <pcl/common/common.h>
 
 #include <pcl/kdtree/kdtree.h>
 
@@ -143,31 +144,6 @@ ExtractHumansizeCloud::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_m
   pass_through_filter(cloud_boxel,false,"y",-search_range_,search_range_);
   pass_through_filter(cloud_boxel,true,"z",min_horizontal_height_,max_horizontal_height_);
 
-  //Pass Through Horizon X
-  /* 
-	pcl::PassThrough<pcl::PointXYZI> pass_x;
-	pass_x.setInputCloud(cloud_boxel);
-	pass_x.setFilterLimitsNegative(false);
-	pass_x.setFilterFieldName("x");
-	pass_x.setFilterLimits(-search_range_,search_range_);
-	pass_x.filter(*cloud_boxel);
-
-  //Pass Through Horizon Y
-	pcl::PassThrough<pcl::PointXYZI> pass_y;
-	pass_y.setInputCloud(cloud_boxel);
-	pass_y.setFilterLimitsNegative(false);
-	pass_y.setFilterFieldName("y");
-	pass_y.setFilterLimits(-search_range_,search_range_);
-	pass_y.filter(*cloud_boxel);
-  
-  //Pass Through Horizon Z
-	pcl::PassThrough<pcl::PointXYZI> pass_z;
-	pass_z.setInputCloud(cloud_boxel);
-	pass_z.setFilterLimitsNegative(true);
-	pass_z.setFilterFieldName("z");
-	pass_z.setFilterLimits(-20.0,0.05);
-	pass_z.filter(*cloud_boxel);
-*/
   // Convert to ROS data type
   sensor_msgs::PointCloud2 output_filter_cloud;
   pcl::toROSMsg(*cloud_boxel, output_filter_cloud);
@@ -200,68 +176,48 @@ ExtractHumansizeCloud::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_m
 
     for (std::vector<int>::const_iterator pit = it->indices.begin(); pit != it->indices.end(); ++pit)
     {
-      cloud_cluster->points.push_back (cloud_boxel->points[*pit]); //*
+      cloud_cluster->points.push_back (cloud_boxel->points[*pit]);
+    }
 
-      if( pit == it->indices.begin()){
-				min_pt = cloud_boxel -> points[*pit];
-				max_pt = cloud_boxel -> points[*pit];
-			}
-			if( min_pt.x > cloud_boxel -> points[*pit].x ){
-				min_pt.x = cloud_boxel -> points[*pit].x;
-			}
-			else if( max_pt.x < cloud_boxel -> points[*pit].x ){
-				max_pt.x = cloud_boxel -> points[*pit].x;
-			}
-			if( min_pt.y > cloud_boxel -> points[*pit].y ){
-				min_pt.y = cloud_boxel -> points[*pit].y;
-			}
-			else if( max_pt.y < cloud_boxel -> points[*pit].y ){
-				max_pt.y = cloud_boxel -> points[*pit].y;
-			}
-			if( min_pt.z > cloud_boxel -> points[*pit].z ){
-				min_pt.z = cloud_boxel -> points[*pit].z;
-			}
-			else if( max_pt.z < cloud_boxel -> points[*pit].z ){
-				max_pt.z = cloud_boxel -> points[*pit].z;
-			}
+    //Search min_point,max_point
+    pcl::getMinMax3D(*cloud_cluster,min_pt,max_pt);
 
-      double target_size[3];
-      // Calculation target size
-		  target_size[0] = fabs(max_pt.x - min_pt.x);
-		  target_size[1] = fabs(max_pt.y - min_pt.y);
-		  target_size[2] = fabs(max_pt.z - min_pt.z);
+    double target_size[3];
+    // Calculation target size
+		target_size[0] = fabs(max_pt.x - min_pt.x);
+		target_size[1] = fabs(max_pt.y - min_pt.y);
+		target_size[2] = fabs(max_pt.z - min_pt.z);
 
-      //ROS_INFO("%lf %lf %lf",target_size[0],target_size[1],target_size[2]);
+    //ROS_INFO("%lf %lf %lf",target_size[0],target_size[1],target_size[2]);
 
-      if(    ((target_size[0] < max_target_width_)  && (target_size[0] > min_target_width_))
-			    && ((target_size[1] < max_target_depth_)  && (target_size[1] > min_target_depth_))
-			    && ((target_size[2] < max_target_height_) && (target_size[2] > min_target_height_))
-			)
-		  {
+    if(    ((target_size[0] < max_target_width_)  && (target_size[0] > min_target_width_))
+		    && ((target_size[1] < max_target_depth_)  && (target_size[1] > min_target_depth_))
+		    && ((target_size[2] < max_target_height_) && (target_size[2] > min_target_height_))
+		)
+		{
 
-        cloud_cluster->width = cloud_cluster->points.size ();
-        cloud_cluster->height = 1;
-        cloud_cluster->is_dense = true;
+      cloud_cluster->width = cloud_cluster->points.size ();
+      cloud_cluster->height = 1;
+      cloud_cluster->is_dense = true;
 
-        if(save_to_pcd_ == true){
-          //save process
-          std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
-          std::stringstream ss;
-          ss <<save_file_path_<< "cloud_cluster_" << j << ".pcd";
-          writer.write<pcl::PointXYZI> (ss.str (), *cloud_cluster, false); //*
-          j++;
-        }
+      if(save_to_pcd_ == true){
+        //save process
+        std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
+        std::stringstream ss;
+        ss <<save_file_path_<< "cloud_cluster_" << j << ".pcd";
+        writer.write<pcl::PointXYZI> (ss.str (), *cloud_cluster, false); //*
+        j++;
+      }
 
-        if(cloud_cluster->points.size() > 1){
-          sensor_msgs::PointCloud2 output_humansize_cloud;
-				  pcl::toROSMsg(*cloud_cluster, output_humansize_cloud);
+      if(cloud_cluster->points.size() > 1){
+        sensor_msgs::PointCloud2 output_humansize_cloud;
+				pcl::toROSMsg(*cloud_cluster, output_humansize_cloud);
 
-				  //Add header to output cloud
-				  output_humansize_cloud.header = cloud_msg->header;
-				  output_humansize_cloud.header.frame_id = robot_frame_;
+				//Add header to output cloud
+				output_humansize_cloud.header = cloud_msg->header;
+				output_humansize_cloud.header.frame_id = robot_frame_;
 
-				  pub2_.publish(output_humansize_cloud);
-        }
+				pub2_.publish(output_humansize_cloud);
       }
     }
   }
