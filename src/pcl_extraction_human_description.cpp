@@ -13,10 +13,14 @@
 #include <pcl/filters/passthrough.h>
 #include <pcl/PCLPointCloud2.h>
 
-#include <pcl/features/moment_of_inertia_estimation.h>
 #include <pcl/features/normal_3d.h>
 
 #include <vector>
+#include <math.h>
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#include <Eigen/Geometry>
+#include <Eigen/LU>
 
 class ExtractHumanDescription{
     public:
@@ -40,48 +44,132 @@ void
 ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr& cloud_msg){
 
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>());
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud2(new pcl::PointCloud<pcl::PointXYZ>());
     pcl::fromROSMsg(*cloud_msg,*cloud);
+
+    for (auto pit = cloud->begin (); pit < cloud->end (); ++pit){
+        std::cout<<pit->x<<std::endl;
+    }
+
+    for (auto &&pit : *cloud){
+        std::cout<<pit.x<<std::endl;
+    }
 
     int cloud_size = cloud->points.size();
     std::cout << "cloud_size: " << cloud_size << std::endl;
 
-    pcl::MomentOfInertiaEstimation <pcl::PointXYZI> feature_extractor;
-    feature_extractor.setInputCloud (cloud);
-    feature_extractor.compute ();
-
-    std::vector <float> moment_of_inertia;
-    std::vector <float> eccentricity;
-    pcl::PointXYZI min_point_AABB;
-    pcl::PointXYZI max_point_AABB;
-    pcl::PointXYZI min_point_OBB;
-    pcl::PointXYZI max_point_OBB;
-    pcl::PointXYZI position_OBB;
-    Eigen::Matrix3f rotational_matrix_OBB;
-    float major_value, middle_value, minor_value;
-    Eigen::Vector3f major_vector, middle_vector, minor_vector;
-    Eigen::Vector3f mass_center;
-
-    feature_extractor.getMomentOfInertia (moment_of_inertia);
-    feature_extractor.getEccentricity (eccentricity);
-    feature_extractor.getAABB (min_point_AABB, max_point_AABB);
-    feature_extractor.getOBB (min_point_OBB, max_point_OBB, position_OBB, rotational_matrix_OBB);
-    feature_extractor.getEigenValues (major_value, middle_value, minor_value);
-    feature_extractor.getEigenVectors (major_vector, middle_vector, minor_vector);
-    feature_extractor.getMassCenter (mass_center);
-
-    // Placeholder for the 3x3 covariance matrix at each surface patch
-    Eigen::Matrix3f covariance_matrix;
-    // 16-bytes aligned placeholder for the XYZ centroid of a surface patch
-    Eigen::Vector4f xyz_centroid;
-
     // Estimate the XYZ centroid
+    Eigen::Vector4f xyz_centroid;
     pcl::compute3DCentroid (*cloud, xyz_centroid);
     std::cout<<"xyz_centroid\n"<<xyz_centroid<<std::endl;
 
     // Compute the 3x3 covariance matrix
-    pcl::computeCovarianceMatrixNormalized (*cloud, xyz_centroid, covariance_matrix);
-    std::cout<<"CovarianceMatrixNormalized\n"<<covariance_matrix<<std::endl;
+    Eigen::Matrix3f covariance_matrix;
+    pcl::computeCovarianceMatrix (*cloud, xyz_centroid, covariance_matrix);
+    std::cout<<"CovarianceMatrix\n"<<covariance_matrix<<std::endl;
+
+    pcl::PointXYZI searchPoint;
+	searchPoint.x = 0.0;
+	searchPoint.y = 0.0;
+	searchPoint.z = 0.0;
+
+	float min_distance,min_distance_tmp;
+
+    min_distance = sqrt(
+		    powf( cloud->points[0].x - searchPoint.x, 2.0f ) +
+		    powf( cloud->points[0].y - searchPoint.y, 2.0f ) +
+		    powf( cloud->points[0].z - searchPoint.z, 2.0f )
+	        );
+
+	//brute force nearest neighbor search
+	for(auto &&pit : *cloud)
+    {
+		min_distance_tmp = sqrt(
+			powf( pit.x - searchPoint.x, 2.0f ) +
+			powf( pit.y - searchPoint.y, 2.0f ) +
+			powf( pit.z - searchPoint.z, 2.0f )
+		);
+
+		if( min_distance < min_distance_tmp){
+			min_distance = min_distance_tmp;
+		}
+	}
+
+    std::cout<<"min_distance= "<<min_distance<<std::endl;
+
+    // intensity buffer
+	double intensity_sum=0, intensity_ave=0, max_intensity=0, intensity_pow_sum=0, intensity_std_dev=0, intensity_histgram_limit = 2000;
+	std::vector<double> intensity_histgram(25);
+
+    Eigen::Matrix3f moment_of_inertia_matrix_tmp = Eigen::Matrix3f::Zero();
+	Eigen::Matrix3f moment_of_inertia_matrix = Eigen::Matrix3f::Zero();
+
+    for(auto &&pit : *cloud)
+    {
+        //Calculate three dimentional moment of inertia matrix
+		moment_of_inertia_matrix_tmp << 
+		powf(pit.y,2.0f)+powf(pit.z,2.0f),	-pit.x*pit.y,							-pit.x*pit.z,
+		-pit.x*pit.y,						powf(pit.x,2.0f)+powf(pit.z,2.0f),	    -pit.y*pit.z,
+		-pit.x*pit.z,						-pit.y*pit.z,						    powf(pit.x,2.0f)+powf(pit.y,2.0f);
+
+		moment_of_inertia_matrix += moment_of_inertia_matrix_tmp;
+
+        // Calculate intensity distribution
+		intensity_sum += pit.intensity;
+		intensity_pow_sum += powf(pit.intensity,2);
+		intensity_histgram[pit.intensity / (intensity_histgram_limit / intensity_histgram.size())] += 1;
+		if( max_intensity < pit.intensity ){
+			max_intensity = pit.intensity;
+		}
+    }
+
+    std::cout<<"moment_of_inertia"<<std::endl;
+    std::cout<<moment_of_inertia_matrix<<std::endl;
+
+    intensity_ave = intensity_sum / cloud->points.size();
+	std::cout << "max_intensity: " << max_intensity << std::endl;
+	std::cout << "intensity_ave: " << intensity_ave << std::endl;
+	intensity_std_dev = sqrt(fabs(intensity_pow_sum / cloud->points.size() - powf(intensity_ave,2)));
+	std::cout << "intensity_std_dev: " << intensity_std_dev <<std::endl;
+
+	std::cout << "intensity_histgram: "<<std::endl;
+    for(int i=0; i<intensity_histgram.size(); i++){
+		intensity_histgram[i] = intensity_histgram[i] / cloud->points.size();
+		std::cout << intensity_histgram[i] << " ";
+		//description.push_back(intensity_histgram[i]);
+	}
+	std::cout << std::endl;
+
+    //Calculate Slice distribution
+    pcl::PointXYZI min_pt,max_pt,sliced_min_pt,sliced_max_pt;
+    pcl::getMinMax3D(*cloud, min_pt, max_pt);
+    int sectors = 10;
+	double sector_height = (max_pt.z - min_pt.z)/sectors;
+
+    pcl::PassThrough<pcl::PointXYZI> pass;
+	std::vector<std::vector<double> > slice_dist(sectors,std::vector<double> (2));
+
+    for(double sec_h = min_pt.z,i = 0; sec_h < max_pt.z - sector_height; sec_h += sector_height, i++){
+		pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_sliced(new pcl::PointCloud<pcl::PointXYZI>());
+		pass.setInputCloud(cloud);
+		pass.setFilterFieldName("z");
+		pass.setFilterLimits(sec_h, sec_h + sector_height);
+		pass.filter(*cloud_sliced);
+
+		pcl::getMinMax3D(*cloud_sliced,sliced_min_pt,sliced_max_pt);
+
+		slice_dist[i][0] = sliced_max_pt.x - sliced_min_pt.x;
+		slice_dist[i][1] = sliced_max_pt.y - sliced_min_pt.y;
+	}
+
+    std::cout << "slice distribution:" << std::endl;
+	for(int i=0;i<slice_dist[0].size();i++){
+		for(int j=0;j<sectors;j++){
+			//description.push_back(slice_dist[j][i]);
+			std::cout << slice_dist[j][i] << " ";
+		}
+		std::cout << std::endl;
+	}
+	std::cout << std::endl;
 
 }
 
