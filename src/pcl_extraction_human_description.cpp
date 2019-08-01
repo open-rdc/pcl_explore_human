@@ -194,30 +194,37 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
     }
 
     //description container
-    std::vector<double> description;
-    description.push_back(cloud_size);
-    description.push_back(min_distance);
-    description.push_back(intensity_ave);
-	description.push_back(intensity_std_dev);
-    for(int i=0; i<int(intensity_histgram.size()); i++){
-		description.push_back(intensity_histgram[i]);
-	}
+    std_msgs::Float32MultiArray description;
+    //f1
+    description.data.push_back(cloud_size);
+    //f2
+    description.data.push_back(min_distance);
+    //f3
     for(int i=0;i<int(covariance_matrix.size());i++){
 		if(i<5 || i==6){
-			description.push_back(covariance_matrix(i));
+			description.data.push_back(covariance_matrix(i));
 		}
     }
+    //f4
     for(int i=0;i<int(moment_of_inertia_matrix.size());i++){
 		if(i<5 || i==6){
-			description.push_back(moment_of_inertia_matrix(i));
+			description.data.push_back(moment_of_inertia_matrix(i));
 		}
     }
+    //f5
     for(int i=0;i<2;i++){
 		for(int j=0;j<10;j++){
-			description.push_back(slice_dist[j][i]);
+			description.data.push_back(slice_dist[j][i]);
 		}
     }   
+    //f6
+    description.data.push_back(intensity_ave);
+	description.data.push_back(intensity_std_dev);
+    for(int i=0; i<int(intensity_histgram.size()); i++){
+		description.data.push_back(intensity_histgram[i]);
+	}
 
+    pub2_.publish(description);
 }
 
 int main(int argc, char** argv)

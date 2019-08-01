@@ -1,4 +1,8 @@
 robot_frame: base_link
+save_to_pcd: false
+save_file_path: /home/taishi/pcd_data/
+
+#description_parameter(if you change these parameter, you need to make a dataset again.)
 lrf_topic: hokuyo3d/hokuyo_cloud2
 voxel_resolution: 0.1
 outlier_mean: 10
@@ -16,6 +20,3 @@ min_target_depth: 0.4
 max_target_depth: 1.6
 min_target_height: 0.4
 max_target_height: 2.0
-
-save_to_pcd: false
-save_file_path: /home/taishi/pcd_data/

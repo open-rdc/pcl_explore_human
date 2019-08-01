@@ -1,4 +1,6 @@
 output_screen: true
+
+#description_parameter(if you change these parameter, you need to make a dataset again.)
 intensity_histgram_limit: 3000
 intensity_histgram_bin: 25
 slice_sectors: 10
