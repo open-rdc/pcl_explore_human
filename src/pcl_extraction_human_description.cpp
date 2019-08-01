@@ -58,7 +58,7 @@ class ExtractHumanDescription{
         std::string save_filepath_;
         std::stringstream ss;
         std::string filename_;
-
+        
 };
 
 void 
@@ -234,9 +234,7 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
 		description.data.push_back(intensity_histgram[i]);
 	}
 
-    pub2_.publish(description);
-    std::cout <<filename_<< std::endl;
-    
+    pub2_.publish(description);    
 
     if(is_save_){
 		std::ofstream ofs;
