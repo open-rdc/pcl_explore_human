@@ -3,7 +3,6 @@
 // PCL specific includes
 #include <sensor_msgs/PointCloud2.h>
 #include <geometry_msgs/PointStamped.h>
-#include <tf/transform_listener.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -17,10 +16,6 @@
 
 #include <vector>
 #include <math.h>
-#include <Eigen/Core>
-#include <Eigen/Dense>
-#include <Eigen/Geometry>
-#include <Eigen/LU>
 
 class ExtractHumanDescription{
     public:
@@ -37,7 +32,6 @@ class ExtractHumanDescription{
         ros::Subscriber sub_;
         ros::Publisher pub_;
 
-        tf::TransformListener *tf_listener;
 };
 
 void 
@@ -46,27 +40,18 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>());
     pcl::fromROSMsg(*cloud_msg,*cloud);
 
-    for (auto pit = cloud->begin (); pit < cloud->end (); ++pit){
-        std::cout<<pit->x<<std::endl;
-    }
-
-    for (auto &&pit : *cloud){
-        std::cout<<pit.x<<std::endl;
-    }
-
+    //Calculate cloud size
     int cloud_size = cloud->points.size();
-    std::cout << "cloud_size: " << cloud_size << std::endl;
 
     // Estimate the XYZ centroid
     Eigen::Vector4f xyz_centroid;
     pcl::compute3DCentroid (*cloud, xyz_centroid);
-    std::cout<<"xyz_centroid\n"<<xyz_centroid<<std::endl;
 
     // Compute the 3x3 covariance matrix
     Eigen::Matrix3f covariance_matrix;
-    pcl::computeCovarianceMatrix (*cloud, xyz_centroid, covariance_matrix);
-    std::cout<<"CovarianceMatrix\n"<<covariance_matrix<<std::endl;
+    pcl::computeCovarianceMatrixNormalized (*cloud, xyz_centroid, covariance_matrix);
 
+    //brute force nearest neighbor search
     pcl::PointXYZI searchPoint;
 	searchPoint.x = 0.0;
 	searchPoint.y = 0.0;
@@ -80,7 +65,6 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
 		    powf( cloud->points[0].z - searchPoint.z, 2.0f )
 	        );
 
-	//brute force nearest neighbor search
 	for(auto &&pit : *cloud)
     {
 		min_distance_tmp = sqrt(
@@ -94,14 +78,13 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
 		}
 	}
 
-    std::cout<<"min_distance= "<<min_distance<<std::endl;
-
-    // intensity buffer
-	double intensity_sum=0, intensity_ave=0, max_intensity=0, intensity_pow_sum=0, intensity_std_dev=0, intensity_histgram_limit = 2000;
-	std::vector<double> intensity_histgram(25);
-
+    // moment of inertia buffer
     Eigen::Matrix3f moment_of_inertia_matrix_tmp = Eigen::Matrix3f::Zero();
 	Eigen::Matrix3f moment_of_inertia_matrix = Eigen::Matrix3f::Zero();
+
+    // intensity buffer
+	double intensity_sum=0, intensity_ave=0, max_intensity=0, intensity_pow_sum=0, intensity_std_dev=0, intensity_histgram_limit = 3000;
+	std::vector<double> intensity_histgram(25);
 
     for(auto &&pit : *cloud)
     {
@@ -113,31 +96,26 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
 
 		moment_of_inertia_matrix += moment_of_inertia_matrix_tmp;
 
-        // Calculate intensity distribution
+        // Calculate intensity sum 
 		intensity_sum += pit.intensity;
 		intensity_pow_sum += powf(pit.intensity,2);
+         // Calculate intensity distribution
 		intensity_histgram[pit.intensity / (intensity_histgram_limit / intensity_histgram.size())] += 1;
 		if( max_intensity < pit.intensity ){
 			max_intensity = pit.intensity;
 		}
     }
 
-    std::cout<<"moment_of_inertia"<<std::endl;
-    std::cout<<moment_of_inertia_matrix<<std::endl;
+    //Calculate intensity average
+    intensity_ave = intensity_sum / cloud_size;
 
-    intensity_ave = intensity_sum / cloud->points.size();
-	std::cout << "max_intensity: " << max_intensity << std::endl;
-	std::cout << "intensity_ave: " << intensity_ave << std::endl;
-	intensity_std_dev = sqrt(fabs(intensity_pow_sum / cloud->points.size() - powf(intensity_ave,2)));
-	std::cout << "intensity_std_dev: " << intensity_std_dev <<std::endl;
+    //Calculate intensity standard deviation
+	intensity_std_dev = sqrt(fabs(intensity_pow_sum / cloud_size - powf(intensity_ave,2)));
 
-	std::cout << "intensity_histgram: "<<std::endl;
-    for(int i=0; i<intensity_histgram.size(); i++){
-		intensity_histgram[i] = intensity_histgram[i] / cloud->points.size();
-		std::cout << intensity_histgram[i] << " ";
-		//description.push_back(intensity_histgram[i]);
-	}
-	std::cout << std::endl;
+    //Normalize intensity histgram
+    for(auto &&hist : intensity_histgram){
+        hist = hist / cloud_size;
+    }
 
     //Calculate Slice distribution
     pcl::PointXYZI min_pt,max_pt,sliced_min_pt,sliced_max_pt;
@@ -161,15 +139,46 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
 		slice_dist[i][1] = sliced_max_pt.y - sliced_min_pt.y;
 	}
 
-    std::cout << "slice distribution:" << std::endl;
-	for(int i=0;i<slice_dist[0].size();i++){
+	for(int i=0;i<2;i++){
 		for(int j=0;j<sectors;j++){
 			//description.push_back(slice_dist[j][i]);
-			std::cout << slice_dist[j][i] << " ";
 		}
-		std::cout << std::endl;
 	}
-	std::cout << std::endl;
+
+    bool see_description_param =true;
+
+    if(see_description_param == true){
+
+        std::cout<<"***EXTRACT_DESCRIPTION_PARAMETER***\n"<<std::endl;
+
+        //f1
+        std::cout<<"Cloud Size:\n"<< cloud_size <<std::endl;
+        //f2
+        std::cout<<"Min Distance:\n"<< min_distance <<std::endl;
+        //f3
+        std::cout<<"Covariance Matrix:\n"<< covariance_matrix <<std::endl;
+        //f4
+        std::cout<<"Moment of Inertia:\n"<< moment_of_inertia_matrix <<std::endl;
+
+        //f5
+        std::cout <<"Slice Distribution:" << std::endl;
+        for(int i=0;i<2;i++){
+		    for(int j=0;j<sectors;j++){
+			    std::cout << slice_dist[j][i] << " ";
+		    }
+        }
+        std::cout << std::endl;
+
+        //f6
+        std::cout << "Intensity Average:\n" << intensity_ave << std::endl;
+        std::cout << "Intensity Standard Deviation:\n" << intensity_std_dev <<std::endl;
+        std::cout << "Intensity Histgram:"<<std::endl;
+        for(auto &&hist : intensity_histgram){
+            std::cout<<hist<<" ";
+        }
+		std::cout << std::endl;
+
+    }
 
 }
 
