@@ -3,6 +3,7 @@
 // PCL specific includes
 #include <sensor_msgs/PointCloud2.h>
 #include <geometry_msgs/PointStamped.h>
+#include <std_msgs/Float32MultiArray.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -24,8 +25,15 @@ class ExtractHumanDescription{
         ExtractHumanDescription(){
             
             ros::NodeHandle private_nh_("~");
+            private_nh_.getParam("output_screen",output_screen_);
+            private_nh_.getParam("intensity_histgram_limit",intensity_histgram_limit_);
+            private_nh_.getParam("intensity_histgram_bin",intensity_histgram_bin_);
+            private_nh_.getParam("slice_sectors",slice_sectors_);
+
+
             sub_=nh_.subscribe<sensor_msgs::PointCloud2>("output_humansize_cloud",1,&ExtractHumanDescription::cluster_cloud_cb,this);
             pub_=nh_.advertise<geometry_msgs::PointStamped>("target_point",1);
+            pub2_=nh_.advertise<std_msgs::Float32MultiArray>("description",1);
 
         }
     private:
@@ -33,6 +41,12 @@ class ExtractHumanDescription{
         ros::NodeHandle nh_;
         ros::Subscriber sub_;
         ros::Publisher pub_;
+        ros::Publisher pub2_;
+
+        bool output_screen_;
+        double intensity_histgram_limit_;
+        int intensity_histgram_bin_;
+        int slice_sectors_;
 
 };
 
@@ -85,8 +99,8 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
 	Eigen::Matrix3f moment_of_inertia_matrix = Eigen::Matrix3f::Zero();
 
     // intensity buffer
-	double intensity_sum=0, intensity_ave=0, max_intensity=0, intensity_pow_sum=0, intensity_std_dev=0, intensity_histgram_limit = 3000;
-	std::vector<double> intensity_histgram(25);
+	double intensity_sum=0, intensity_ave=0, max_intensity=0, intensity_pow_sum=0, intensity_std_dev=0;
+	std::vector<double> intensity_histgram(intensity_histgram_bin_);
 
     for(auto &&pit : *cloud)
     {
@@ -102,7 +116,7 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
 		intensity_sum += pit.intensity;
 		intensity_pow_sum += powf(pit.intensity,2);
          // Calculate intensity distribution
-		intensity_histgram[pit.intensity / (intensity_histgram_limit / intensity_histgram.size())] += 1;
+		intensity_histgram[pit.intensity / (intensity_histgram_limit_ / intensity_histgram.size())] += 1;
 		if( max_intensity < pit.intensity ){
 			max_intensity = pit.intensity;
 		}
@@ -122,11 +136,10 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
     //Calculate Slice distribution
     pcl::PointXYZI min_pt,max_pt,sliced_min_pt,sliced_max_pt;
     pcl::getMinMax3D(*cloud, min_pt, max_pt);
-    int sectors = 10;
-	double sector_height = (max_pt.z - min_pt.z)/sectors;
+	double sector_height = (max_pt.z - min_pt.z)/slice_sectors_;
 
     pcl::PassThrough<pcl::PointXYZI> pass;
-	std::vector<std::vector<double> > slice_dist(sectors,std::vector<double> (2));
+	std::vector<std::vector<double> > slice_dist(slice_sectors_,std::vector<double> (2));
 
     for(double sec_h = min_pt.z,i = 0; sec_h < max_pt.z - sector_height; sec_h += sector_height, i++){
 		pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_sliced(new pcl::PointCloud<pcl::PointXYZI>());
@@ -147,9 +160,7 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
         }
 	}
 
-    bool see_description_param =false;
-
-    if(see_description_param == true){
+    if(output_screen_ == true){
 
         std::cout<<"***EXTRACT_DESCRIPTION_PARAMETER***\n"<<std::endl;
 
@@ -165,7 +176,7 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
         //f5
         std::cout <<"Slice Distribution:" << std::endl;
         for(int i=0;i<2;i++){
-		    for(int j=0;j<sectors;j++){
+		    for(int j=0;j<slice_sectors_;j++){
 			    std::cout << slice_dist[j][i] << " ";
 		    }
         }

@@ -1,5 +1,8 @@
 <launch>
-    <node pkg="pcl_explore_human" type="pcl_detect_humansize_cloud" name="pcl_explore_human" output="screen" respawn="false" respawn_delay="0">
+     <node pkg="pcl_explore_human" type="pcl_extraction_human_description" name="pcl_extraction_human_description" output="screen" respawn="false" respawn_delay="0">
+        <rosparam command="load" file="$(find pcl_explore_human)/config/pcl_extraction_human_description.yaml"/>
+    </node>
+    <node pkg="pcl_explore_human" type="pcl_detect_humansize_cloud" name="pcl_detect_humansize_cloud" output="screen" respawn="false" respawn_delay="0">
         <rosparam command="load" file="$(find pcl_explore_human)/config/pcl_detect_humansize_cloud.yaml"/>
     </node>
 </launch>

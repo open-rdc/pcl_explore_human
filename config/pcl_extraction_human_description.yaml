@@ -1,0 +1,4 @@
+output_screen: true
+intensity_histgram_limit: 3000
+intensity_histgram_bin: 25
+slice_sectors: 10
