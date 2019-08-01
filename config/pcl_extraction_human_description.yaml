@@ -1,4 +1,7 @@
 output_screen: true
+is_save: true
+save_filepath: /home/taishi/pcd_data/
+description_filename: description.txt
 
 #description_parameter(if you change these parameter, you need to make a dataset again.)
 intensity_histgram_limit: 3000
