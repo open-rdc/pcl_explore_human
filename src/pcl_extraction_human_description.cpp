@@ -17,6 +17,8 @@
 #include <vector>
 #include <math.h>
 
+#include <Eigen/Dense>
+
 class ExtractHumanDescription{
     public:
         ExtractHumanDescription(){
@@ -114,7 +116,7 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
 
     //Normalize intensity histgram
     for(auto &&hist : intensity_histgram){
-        hist = hist / cloud_size;
+        hist /= cloud_size;
     }
 
     //Calculate Slice distribution
@@ -133,19 +135,19 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
 		pass.setFilterLimits(sec_h, sec_h + sector_height);
 		pass.filter(*cloud_sliced);
 
+        if(int(cloud_sliced->size())==0){
+            slice_dist[i][0]=0;
+            slice_dist[i][1]=0;
+        }
+        else{
 		pcl::getMinMax3D(*cloud_sliced,sliced_min_pt,sliced_max_pt);
 
 		slice_dist[i][0] = sliced_max_pt.x - sliced_min_pt.x;
 		slice_dist[i][1] = sliced_max_pt.y - sliced_min_pt.y;
+        }
 	}
 
-	for(int i=0;i<2;i++){
-		for(int j=0;j<sectors;j++){
-			//description.push_back(slice_dist[j][i]);
-		}
-	}
-
-    bool see_description_param =true;
+    bool see_description_param =false;
 
     if(see_description_param == true){
 
@@ -179,6 +181,31 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
 		std::cout << std::endl;
 
     }
+
+    //description container
+    std::vector<double> description;
+    description.push_back(cloud_size);
+    description.push_back(min_distance);
+    description.push_back(intensity_ave);
+	description.push_back(intensity_std_dev);
+    for(int i=0; i<int(intensity_histgram.size()); i++){
+		description.push_back(intensity_histgram[i]);
+	}
+    for(int i=0;i<int(covariance_matrix.size());i++){
+		if(i<5 || i==6){
+			description.push_back(covariance_matrix(i));
+		}
+    }
+    for(int i=0;i<int(moment_of_inertia_matrix.size());i++){
+		if(i<5 || i==6){
+			description.push_back(moment_of_inertia_matrix(i));
+		}
+    }
+    for(int i=0;i<2;i++){
+		for(int j=0;j<10;j++){
+			description.push_back(slice_dist[j][i]);
+		}
+    }   
 
 }
 
