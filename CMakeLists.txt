@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_conversions
   pcl_ros
   roscpp
+  rospy
   sensor_msgs
   tf
 )
@@ -171,6 +172,12 @@ target_link_libraries(pcl_extraction_human_description ${catkin_LIBRARIES})
 #   scripts/my_python_script
 #   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 # )
+
+install(FILES
+    scripts/svm_training.py
+    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts
+)
+
 
 ## Mark executables and/or libraries for installation
 # install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_node

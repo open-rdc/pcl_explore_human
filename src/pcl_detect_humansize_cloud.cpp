@@ -1,4 +1,5 @@
 #include <ros/ros.h>
+#include <ros/package.h>
 #include <tf/transform_listener.h>
 #include <pcl_ros/transforms.h>
 #include <sensor_msgs/PointCloud2.h>
@@ -55,7 +56,6 @@ class ExtractHumansizeCloud{
       private_nh_.getParam("min_target_height",min_target_height_);
       private_nh_.getParam("max_target_height",max_target_height_);
       private_nh_.getParam("save_to_pcd", save_to_pcd_);
-      private_nh_.getParam("save_file_path",save_file_path_);
 
       sub_ = nh_.subscribe<sensor_msgs::PointCloud2> (lrf_topic_, 1, &ExtractHumansizeCloud::cloud_cb,this);
       pub_ = nh_.advertise<sensor_msgs::PointCloud2> ("output_filter_cloud", 1);
@@ -96,7 +96,7 @@ class ExtractHumansizeCloud{
     double max_target_height_;
 
     bool save_to_pcd_;
-    std::string save_file_path_;
+    std::string path_ = ros::package::getPath("pcl_explore_human");
     std::string filename_;
     int cluster_number=0;   
 
@@ -202,7 +202,7 @@ ExtractHumansizeCloud::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_m
         pcl::PCDWriter writer;
         std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
         std::stringstream ss;
-        ss <<save_file_path_<< "cloud_cluster_" << cluster_number << ".pcd";
+        ss << path_<<"/dataset/"<<"/pcd/"<< "cloud_cluster_" << cluster_number << ".pcd";
         ss >> filename_;
         std::cout <<"output_humansize_cloud save to "<< filename_ << std::endl;
         writer.write<pcl::PointXYZI> (ss.str (), *cloud_cluster, false); 

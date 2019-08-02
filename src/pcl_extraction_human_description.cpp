@@ -1,4 +1,5 @@
 #include<ros/ros.h>
+#include<ros/package.h>
 
 // PCL specific includes
 #include <sensor_msgs/PointCloud2.h>
@@ -31,14 +32,13 @@ class ExtractHumanDescription{
             private_nh_.getParam("slice_sectors",slice_sectors_);
             private_nh_.getParam("is_save",is_save_);
             private_nh_.getParam("description_filename",description_filename_);
-            private_nh_.getParam("save_filepath",save_filepath_);
 
 
             sub_=nh_.subscribe<sensor_msgs::PointCloud2>("output_humansize_cloud",1,&ExtractHumanDescription::cluster_cloud_cb,this);
             pub_=nh_.advertise<geometry_msgs::PointStamped>("target_point",1);
             pub2_=nh_.advertise<std_msgs::Float32MultiArray>("description",1);
 
-            ss<<save_filepath_<<description_filename_;
+            ss<<path_<<"/dataset/"<<description_filename_;
             ss>>filename_;
 
         }
@@ -55,10 +55,10 @@ class ExtractHumanDescription{
         int slice_sectors_;
         bool is_save_;
         std::string description_filename_;
-        std::string save_filepath_;
         std::stringstream ss;
         std::string filename_;
-        
+        std::string path_ = ros::package::getPath("pcl_explore_human");
+
 };
 
 void 
@@ -239,9 +239,14 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
     if(is_save_){
 		std::ofstream ofs;
 		ofs.open(filename_, std::ios::ate | std::ios::app);
-		ofs << "1 ";
-		for(int i=0;i<description.data.size();i++){
-			ofs << i+1 << ":" << description.data[i] << " ";
+		//ofs << "1 ";
+        ofs<<1<<",";
+		for(int i=0;i<description.data.size();++i){
+			//ofs << i+1 << ":" << description.data[i] << " ";
+            ofs <<description.data[i];
+            if(i!=description.data.size()-1){
+                ofs<<",";
+            }
 		}
 		ofs << std::endl;
 		ofs.close();
