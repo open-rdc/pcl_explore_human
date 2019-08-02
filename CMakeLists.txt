@@ -175,6 +175,7 @@ target_link_libraries(pcl_extraction_human_description ${catkin_LIBRARIES})
 
 install(FILES
     scripts/svm_training.py
+    scripts/predict_target.py
     DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts
 )
 
