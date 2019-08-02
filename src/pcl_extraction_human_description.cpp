@@ -121,7 +121,7 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
 		-pit.x*pit.y,						powf(pit.x,2.0f)+powf(pit.z,2.0f),	    -pit.y*pit.z,
 		-pit.x*pit.z,						-pit.y*pit.z,						    powf(pit.x,2.0f)+powf(pit.y,2.0f);
 
-		moment_of_inertia_matrix += moment_of_inertia_matrix_tmp;
+		moment_of_inertia_matrix += moment_of_inertia_matrix_tmp/cloud_size;
 
         // Calculate intensity sum 
 		intensity_sum += pit.intensity;

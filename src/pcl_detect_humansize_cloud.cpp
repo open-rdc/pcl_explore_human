@@ -145,6 +145,10 @@ ExtractHumansizeCloud::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_m
   pass_through_filter(cloud_boxel,false,"y",-search_range_,search_range_);
   pass_through_filter(cloud_boxel,true,"z",min_horizontal_height_,max_horizontal_height_);
 
+   if(cloud_boxel->points.size()==0){
+    return;
+   }
+
   // Convert to ROS data type
   sensor_msgs::PointCloud2 output_filter_cloud;
   pcl::toROSMsg(*cloud_boxel, output_filter_cloud);
@@ -202,7 +206,7 @@ ExtractHumansizeCloud::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_m
         pcl::PCDWriter writer;
         std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
         std::stringstream ss;
-        ss << path_<<"/dataset/"<<"/pcd/"<< "cloud_cluster_" << cluster_number << ".pcd";
+        ss << path_<<"/dataset"<<"/pcd/"<< "cloud_cluster_" << cluster_number << ".pcd";
         ss >> filename_;
         std::cout <<"output_humansize_cloud save to "<< filename_ << std::endl;
         writer.write<pcl::PointXYZI> (ss.str (), *cloud_cluster, false); 
