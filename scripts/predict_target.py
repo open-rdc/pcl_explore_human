@@ -26,9 +26,10 @@ def callback(description):
     #print(features)
 
     predict=loaded_clf.predict(features)
-    if(predict[0]==1.0){
-
-    }
+    if predict[0]==0.0:
+        print(0)
+    else predict[0]==1.0:
+        print(1)
 
 def target_predict():
     rospy.init_node('target_predict')
@@ -38,10 +39,12 @@ def target_predict():
 if __name__  == '__main__':
     rospack = rospkg.RosPack()
     package_path=rospack.get_path('pcl_explore_human')
+    f = open(package_path+'/config/'+'/svm_predict.yaml', "r+")
+    f_param = yaml.load(f)
+    is_predict=f_param["is_predict"]
     model_filepath = package_path + '/model/'
     model_filename = 'model.sav'
     filepath = model_filepath + model_filename
     print(filepath)
     loaded_clf=pickle.load(open(filepath,'rb'))
-
     target_predict()
