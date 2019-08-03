@@ -1,6 +1,7 @@
 output_screen: true
-is_save: false
-description_filename: description.csv
+is_save: true
+label: 1
+description_filename: description_1.csv
 
 #description_parameter(if you change these parameter, you need to make a dataset again.)
 intensity_histgram_limit: 3000

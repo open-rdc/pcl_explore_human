@@ -98,7 +98,7 @@ class ExtractHumansizeCloud{
     bool save_to_pcd_;
     std::string path_ = ros::package::getPath("pcl_explore_human");
     std::string filename_;
-    int cluster_number=0;   
+    int cluster_number=1;   
 
 };
 
@@ -122,6 +122,10 @@ ExtractHumansizeCloud::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_m
   //pcl to rosmsg
   pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>());
   pcl::fromROSMsg (transformed_cloud, *cloud);
+
+  if(cloud->size()==0){
+    return;
+  }
   
   //filter container
   pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_boxel(new pcl::PointCloud<pcl::PointXYZI>());
