@@ -15,22 +15,27 @@ import yaml
 rospack = rospkg.RosPack()
 package_path=rospack.get_path('pcl_explore_human')
 
-f = open(package_path+'/config/'+'/pcl_extraction_human_description.yaml', "r+")
+f = open(package_path+'/config/'+'/svm_training.yaml', "r+")
 f_param = yaml.load(f)
 
 filename=f_param["description_filename"]
-
+delimiter=f_param["data_delimiter"]
+test_size=f_param["test_size"]
+svm_kernel=f_param["svm_kernel"]
+svm_C=f_param["svm_C"]
+svm_gamma=f_param["svm_gamma"]
 filepath=package_path+'/dataset/'+filename
 
-data=np.loadtxt( filepath ,delimiter=',',dtype=float)
+
+data=np.loadtxt( filepath ,delimiter=delimiter,dtype=float)
 labels = data[:, 0:1]
-print(labels)
+#print(labels)
 #features = preprocessing.minmax_scale(data[:, 1:])
 features = data[:, 1:]
-print(features)
-x_train, x_test, y_train, y_test = train_test_split(features, labels.ravel(), test_size=0.3)
+#print(features)
+x_train, x_test, y_train, y_test = train_test_split(features, labels.ravel(), test_size=test_size)
 
-clf = svm.SVC(kernel='rbf', C=10, gamma='auto')
+clf = svm.SVC(kernel=svm_kernel, C=svm_C, gamma=svm_gamma)
 clf.fit(x_train, y_train)
 predict=clf.predict(x_test)
 print(accuracy_score(y_test, predict), precision_score(y_test, predict), recall_score(y_test, predict))

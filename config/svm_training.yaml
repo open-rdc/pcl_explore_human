@@ -1,0 +1,6 @@
+description_filename: description.csv
+data_delimiter: ','
+test_size: 0.3
+svm_kernel: 'rbf'
+svm_C: 10
+svm_gamma: 'auto'
