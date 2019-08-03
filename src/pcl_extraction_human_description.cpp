@@ -141,7 +141,7 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
 
     Eigen::Vector4f transform_centroid;
     pcl::compute3DCentroid (*transform_cloud_rotate, transform_centroid);
-    std::cout << "transform_centroid: " << transform_centroid << std::endl;
+    //std::cout << "transform_centroid: " << transform_centroid << std::endl;
 
     // Compute the 3x3 covariance matrix
     Eigen::Matrix3f covariance_matrix;
