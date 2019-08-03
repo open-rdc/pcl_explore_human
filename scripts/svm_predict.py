@@ -21,7 +21,7 @@ class svm_predict:
     
     def predict(self,data):
         predict=self.clf.predict(np.array([data]))
-        return predict
+        return predict[0]
 
 if __name__ == "__main__":
     dl=svm_predict()

@@ -2,12 +2,20 @@
 
 import rospy
 from std_msgs.msg import Float32MultiArray
-from geometry_msgs.msg import PointStamped
+from std_msgs.msg import Int8
 
 from svm_predict import *
 
-class Subscribe_target_predict:
+class Publisher_target_predict():
     def __init__(self):
+        self.publisher = rospy.Publisher('/predict_target_label',Int8, queue_size=10) 
+        self.message= Int8()
+    
+    def send_msg(self):
+        self.publisher.publish(self.message)
+
+class Subscriber_target_predict():
+    def __init__(self,pub):
         self.sub = rospy.Subscriber("description",Float32MultiArray, self.callback)
 
         self.message=Float32MultiArray()
@@ -16,13 +24,15 @@ class Subscribe_target_predict:
     
     def callback(self,message):
         self.predict=self.ml.predict(message.data)
-
-class Publisher_target_predict:
-    
+        #print(self.predict)
+        pub.message.data=self.predict
+        pub.send_msg()
 
 if __name__  == '__main__':
+
     rospy.init_node('predict_target')
-    sub=Subscribe_target_predict()
+    pub=Publisher_target_predict()
+    sub=Subscriber_target_predict(pub)
     
     try:
         rospy.spin()
