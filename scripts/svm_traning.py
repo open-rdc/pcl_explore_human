@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import rospy
 import rospkg
 import numpy as np
 from sklearn import preprocessing
@@ -8,7 +7,6 @@ from sklearn.model_selection import train_test_split
 from sklearn import svm
 from sklearn.metrics import accuracy_score, precision_score, recall_score
 import pickle
-import matplotlib.pyplot as plt
 
 import yaml
 
