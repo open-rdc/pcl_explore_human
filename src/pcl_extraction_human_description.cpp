@@ -37,6 +37,7 @@ class ExtractHumanDescription{
             sub_=nh_.subscribe<sensor_msgs::PointCloud2>("output_humansize_cloud",1,&ExtractHumanDescription::cluster_cloud_cb,this);
             pub_=nh_.advertise<geometry_msgs::PointStamped>("target_point",1);
             pub2_=nh_.advertise<std_msgs::Float32MultiArray>("description",1);
+            pub3_=nh_.advertise<sensor_msgs::PointCloud2>("translate_cloud",1);
 
             ss<<path_<<"/dataset/"<<description_filename_;
             ss>>filename_;
@@ -48,6 +49,7 @@ class ExtractHumanDescription{
         ros::Subscriber sub_;
         ros::Publisher pub_;
         ros::Publisher pub2_;
+        ros::Publisher pub3_;
 
         bool output_screen_;
         double intensity_histgram_limit_;
@@ -69,14 +71,6 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
 
     //Calculate cloud size
     int cloud_size = cloud->points.size();
-
-    // Estimate the XYZ centroid
-    Eigen::Vector4f xyz_centroid;
-    pcl::compute3DCentroid (*cloud, xyz_centroid);
-
-    // Compute the 3x3 covariance matrix
-    Eigen::Matrix3f covariance_matrix;
-    pcl::computeCovarianceMatrixNormalized (*cloud, xyz_centroid, covariance_matrix);
 
     //brute force nearest neighbor search
     pcl::PointXYZI searchPoint;
@@ -105,6 +99,54 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
 		}
 	}
 
+    // Estimate the XYZ centroid
+    Eigen::Vector4f xyz_centroid;
+    pcl::compute3DCentroid (*cloud, xyz_centroid);
+
+    //PCA
+    pcl::PCA<pcl::PointXYZI> pca;
+    Eigen::Vector3f eigen_values;
+	Eigen::Matrix3f eigen_vectors;
+
+    pca.setInputCloud(cloud);
+
+    eigen_values = pca.getEigenValues();
+    //std::cout << "Eigen values of PCAed pointcloud: " << eigen_values[0] << ", "  << eigen_values[1] << ", " << eigen_values[2] << std::endl;
+    eigen_vectors << pca.getEigenVectors();
+    //std::cout << eigen_vectors <<std::endl;
+
+    //Rotation cloud from PCA data
+    //double theta=0.296706;  //17deg
+    double theta;
+	theta = atan2(eigen_vectors(1,0), eigen_vectors(0,0));
+	//std::cout << "Theta: " << theta << std::endl;
+
+    Eigen::Affine3f translate = Eigen::Affine3f::Identity();
+	Eigen::Affine3f rotate = Eigen::Affine3f::Identity();
+    pcl::PointCloud<pcl::PointXYZI>::Ptr transform_cloud_translate(new pcl::PointCloud<pcl::PointXYZI>());
+	pcl::PointCloud<pcl::PointXYZI>::Ptr transform_cloud_rotate(new pcl::PointCloud<pcl::PointXYZI>());
+
+    translate.translation() << -xyz_centroid[0], -xyz_centroid[1], -xyz_centroid[2];
+	pcl::transformPointCloud(*cloud, *transform_cloud_translate, translate);
+
+    rotate.rotate(Eigen::AngleAxisf(-theta, Eigen::Vector3f::UnitZ()));
+	pcl::transformPointCloud(*transform_cloud_translate, *transform_cloud_rotate, rotate);
+
+    sensor_msgs::PointCloud2 translate_output;
+    pcl::toROSMsg(*transform_cloud_rotate, translate_output);
+	translate_output.header = cloud_msg -> header;
+	translate_output.header.frame_id = "base_link";
+    pub3_.publish(translate_output);
+
+
+    Eigen::Vector4f transform_centroid;
+    pcl::compute3DCentroid (*transform_cloud_rotate, transform_centroid);
+    std::cout << "transform_centroid: " << transform_centroid << std::endl;
+
+    // Compute the 3x3 covariance matrix
+    Eigen::Matrix3f covariance_matrix;
+    pcl::computeCovarianceMatrixNormalized (*transform_cloud_rotate, transform_centroid, covariance_matrix);
+
     // moment of inertia buffer
     Eigen::Matrix3f moment_of_inertia_matrix_tmp = Eigen::Matrix3f::Zero();
 	Eigen::Matrix3f moment_of_inertia_matrix = Eigen::Matrix3f::Zero();
@@ -113,7 +155,7 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
 	double intensity_sum=0, intensity_ave=0, max_intensity=0, intensity_pow_sum=0, intensity_std_dev=0;
 	std::vector<double> intensity_histgram(intensity_histgram_bin_);
 
-    for(auto &&pit : *cloud)
+    for(auto &&pit : *transform_cloud_rotate)
     {
         //Calculate three dimentional moment of inertia matrix
 		moment_of_inertia_matrix_tmp << 
@@ -146,7 +188,7 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
 
     //Calculate Slice distribution
     pcl::PointXYZI min_pt,max_pt,sliced_min_pt,sliced_max_pt;
-    pcl::getMinMax3D(*cloud, min_pt, max_pt);
+    pcl::getMinMax3D(*transform_cloud_rotate, min_pt, max_pt);
 	double sector_height = (max_pt.z - min_pt.z)/slice_sectors_;
 
     pcl::PassThrough<pcl::PointXYZI> pass;
@@ -154,7 +196,7 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
 
     for(double sec_h = min_pt.z,i = 0; sec_h < max_pt.z - sector_height; sec_h += sector_height, i++){
 		pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_sliced(new pcl::PointCloud<pcl::PointXYZI>());
-		pass.setInputCloud(cloud);
+		pass.setInputCloud(transform_cloud_rotate);
 		pass.setFilterFieldName("z");
 		pass.setFilterLimits(sec_h, sec_h + sector_height);
 		pass.filter(*cloud_sliced);
