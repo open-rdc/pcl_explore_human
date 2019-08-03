@@ -2,14 +2,14 @@
 
 import rospy
 from std_msgs.msg import Float32MultiArray
-from std_msgs.msg import Int8
+from std_msgs.msg import Float32
 
 from svm_predict import *
 
 class Publisher_target_predict():
     def __init__(self):
-        self.publisher = rospy.Publisher('/predict_target_label',Int8, queue_size=10) 
-        self.message= Int8()
+        self.publisher = rospy.Publisher('/predict_target_label',Float32, queue_size=10) 
+        self.message= Float32()
     
     def send_msg(self):
         self.publisher.publish(self.message)
@@ -24,7 +24,7 @@ class Subscriber_target_predict():
     
     def callback(self,message):
         self.predict=self.ml.predict(message.data)
-        #print(self.predict)
+        print(self.predict)
         pub.message.data=self.predict
         pub.send_msg()
 

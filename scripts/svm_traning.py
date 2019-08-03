@@ -30,8 +30,8 @@ filepath=package_path+'/dataset/'+filename
 data=np.loadtxt( filepath ,delimiter=delimiter,dtype=float)
 labels = data[:, 0:1]
 #print(labels)
-features = preprocessing.minmax_scale(data[:, 1:])
-#features = data[:, 1:]
+#features = preprocessing.minmax_scale(data[:, 1:])
+features = data[:, 1:]
 #print(features)
 x_train, x_test, y_train, y_test = train_test_split(features, labels.ravel(), test_size=test_size)
 

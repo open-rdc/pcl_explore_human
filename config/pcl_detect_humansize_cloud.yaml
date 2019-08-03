@@ -1,21 +1,21 @@
 robot_frame: base_link
-save_to_pcd: true
+save_to_pcd: false
 
 #description_parameter(if you change these parameter, you need to make a dataset again.)
 lrf_topic: hokuyo3d/hokuyo_cloud2
 voxel_resolution: 0.05
 outlier_mean: 10
 outlier_threshold: 0.25
-search_range: 2.5
+search_range: 3.0
 min_horizontal_height: -20
 max_horizontal_height: -0.25
 cluster_tolerance: 0.2
 min_cluster_size: 10
 max_cluster_size: 100000
 
-min_target_width: 0.20
-max_target_width: 0.5
-min_target_depth: 0.20
-max_target_depth: 0.5
-min_target_height: 0.5
-max_target_height: 1.0
+min_target_width: 0.4
+max_target_width: 1.6
+min_target_depth: 0.4
+max_target_depth: 1.6
+min_target_height: 0.4
+max_target_height: 2.0
