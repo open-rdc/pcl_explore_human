@@ -6,6 +6,8 @@ from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 from sklearn import svm
 from sklearn.metrics import accuracy_score, precision_score, recall_score
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import f1_score
 import pickle
 
 import yaml
@@ -43,6 +45,10 @@ print('precision_score')
 print(precision_score(y_test, predict))
 print('recall_score')
 print(recall_score(y_test, predict))
+print('f1_score')
+print(f1_score(y_test,predict)) 
+print('confusion_matrix')
+print(confusion_matrix(y_test, predict,labels=[0,1]))
 
 model_filepath = package_path + '/model/'
 model_filename = 'model.sav'
