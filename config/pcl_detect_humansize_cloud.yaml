@@ -13,9 +13,9 @@ cluster_tolerance: 0.2
 min_cluster_size: 10
 max_cluster_size: 100000
 
-min_target_width: 0.4
+min_target_width: 0.2
 max_target_width: 1.6
-min_target_depth: 0.4
+min_target_depth: 0.2
 max_target_depth: 1.6
-min_target_height: 0.4
+min_target_height: 0.6
 max_target_height: 2.0
