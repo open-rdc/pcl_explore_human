@@ -1,4 +1,4 @@
-output_screen: false
+output_screen: true
 is_save: false
 label: 1
 description_filename: description_1.csv

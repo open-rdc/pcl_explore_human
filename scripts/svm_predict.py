@@ -20,7 +20,8 @@ class svm_predict:
         self.clf=pickle.load(open(self.filepath,'rb'))
     
     def predict(self,data):
-        predict=self.clf.predict(np.array([data]))
+        features=np.array([data])[:, 3:]
+        predict=self.clf.predict(features)
         return predict[0]
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
-#include<ros/ros.h>
-#include<ros/package.h>
+#include <ros/ros.h>
+#include <ros/package.h>
 #include <tf/transform_listener.h>
 #include <pcl_ros/transforms.h>
 #include <sensor_msgs/PointCloud2.h>
@@ -37,8 +37,8 @@ class ExtractHumanDescription{
 
 
             sub_=nh_.subscribe<sensor_msgs::PointCloud2>("output_humansize_cloud",1,&ExtractHumanDescription::cluster_cloud_cb,this);
-            pub2_=nh_.advertise<std_msgs::Float32MultiArray>("description",1);
-            pub3_=nh_.advertise<sensor_msgs::PointCloud2>("translate_cloud",1);
+            pub_=nh_.advertise<std_msgs::Float32MultiArray>("description",1);
+            pub2_=nh_.advertise<sensor_msgs::PointCloud2>("translate_cloud",1);
 
             tf_listener_ = new tf::TransformListener();
 
@@ -50,8 +50,8 @@ class ExtractHumanDescription{
         void cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr& input);
         ros::NodeHandle nh_;
         ros::Subscriber sub_;
+        ros::Publisher pub_;
         ros::Publisher pub2_;
-        ros::Publisher pub3_;
 
          tf::TransformListener *tf_listener_;
 
@@ -169,7 +169,7 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
     pcl::toROSMsg(*transform_cloud_rotate, translate_output);
 	translate_output.header = cloud_msg -> header;
 	translate_output.header.frame_id = "base_link";
-    pub3_.publish(translate_output);
+    pub2_.publish(translate_output);
 
 
     Eigen::Vector4f transform_centroid;
@@ -250,6 +250,13 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
 
         std::cout<<"***EXTRACT_DESCRIPTION_PARAMETER***\n"<<std::endl;
 
+        //Point_Stamp
+        std::cout<<"Target Point:"<<std::endl;
+        for(int i=0;i<target_point.size();i++){
+            std::cout<<target_point[i]<<" ";
+        }
+        std::cout<<std::endl;
+
         //f1
         std::cout<<"Cloud Size:\n"<< cloud_size <<std::endl;
         //f2
@@ -280,6 +287,12 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
 
     //description container
     std_msgs::Float32MultiArray description;
+    
+    //Target Point
+    for(int i=0;i<target_point.size();i++){
+            description.data.push_back(target_point[i]);
+    }
+
     //f1
     description.data.push_back(cloud_size);
     //f2
@@ -309,7 +322,7 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
 		description.data.push_back(intensity_histgram[i]);
 	}
 
-    pub2_.publish(description);    
+    pub_.publish(description);    
 
     if(is_save_){
 		std::ofstream ofs;
