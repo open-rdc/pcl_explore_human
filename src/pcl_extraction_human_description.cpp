@@ -3,7 +3,6 @@
 #include <tf/transform_listener.h>
 #include <pcl_ros/transforms.h>
 #include <sensor_msgs/PointCloud2.h>
-#include <geometry_msgs/PointStamped.h>
 
 // PCL specific includes
 #include <std_msgs/Float32MultiArray.h>
@@ -38,7 +37,6 @@ class ExtractHumanDescription{
 
 
             sub_=nh_.subscribe<sensor_msgs::PointCloud2>("output_humansize_cloud",1,&ExtractHumanDescription::cluster_cloud_cb,this);
-            pub_=nh_.advertise<geometry_msgs::PointStamped>("target_point",1);
             pub2_=nh_.advertise<std_msgs::Float32MultiArray>("description",1);
             pub3_=nh_.advertise<sensor_msgs::PointCloud2>("translate_cloud",1);
 
@@ -52,7 +50,6 @@ class ExtractHumanDescription{
         void cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr& input);
         ros::NodeHandle nh_;
         ros::Subscriber sub_;
-        ros::Publisher pub_;
         ros::Publisher pub2_;
         ros::Publisher pub3_;
 
