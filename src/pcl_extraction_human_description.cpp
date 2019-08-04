@@ -1,9 +1,11 @@
 #include<ros/ros.h>
 #include<ros/package.h>
-
-// PCL specific includes
+#include <tf/transform_listener.h>
+#include <pcl_ros/transforms.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <geometry_msgs/PointStamped.h>
+
+// PCL specific includes
 #include <std_msgs/Float32MultiArray.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
@@ -40,6 +42,8 @@ class ExtractHumanDescription{
             pub2_=nh_.advertise<std_msgs::Float32MultiArray>("description",1);
             pub3_=nh_.advertise<sensor_msgs::PointCloud2>("translate_cloud",1);
 
+            tf_listener_ = new tf::TransformListener();
+
             ss<<path_<<"/dataset/"<<description_filename_;
             ss>>filename_;
 
@@ -51,6 +55,8 @@ class ExtractHumanDescription{
         ros::Publisher pub_;
         ros::Publisher pub2_;
         ros::Publisher pub3_;
+
+         tf::TransformListener *tf_listener_;
 
         bool output_screen_;
         double intensity_histgram_limit_;
@@ -68,6 +74,25 @@ class ExtractHumanDescription{
 void 
 ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr& cloud_msg){
 
+    //Calculate robotpose from map_frame to robot_frame
+    tf::StampedTransform transform;
+    sensor_msgs::PointCloud2 transformed_cloud;
+
+    try{
+		tf_listener_->waitForTransform("odom",cloud_msg->header.frame_id, ros::Time(0), ros::Duration(100.0));
+        tf_listener_->lookupTransform("odom", cloud_msg->header.frame_id, ros::Time(0), transform);
+	}catch(tf::TransformException ex){
+		ROS_ERROR("%s",ex.what());
+	}
+
+    std::vector<double>robot_pose(3);
+    robot_pose[0] = transform.getOrigin().x();
+    robot_pose[1] = transform.getOrigin().y();
+    robot_pose[2] = transform.getOrigin().z();
+
+    //std::cout<<"x="<<robot_pose[0]<<" "<<"y="<<robot_pose[1]<<" "<<"z="<<robot_pose[2]<<std::endl;
+	
+    //pcl to rosmsg
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>());
     pcl::fromROSMsg(*cloud_msg,*cloud);
 
@@ -105,6 +130,15 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
     Eigen::Vector4f xyz_centroid;
     pcl::compute3DCentroid (*cloud, xyz_centroid);
 
+    //Calculate target_point from odom
+    std::cout<<"target_point"<<std::endl;
+    std::vector<double> target_point(3);
+    for(int i=0;i<target_point.size();i++){
+        target_point[i]=xyz_centroid[0]+robot_pose[i];
+        std::cout<<target_point[i]<<std::endl;
+    }
+    std::cout<<std::endl;
+    
     //PCA
     pcl::PCA<pcl::PointXYZI> pca;
     Eigen::Vector3f eigen_values;

@@ -23,10 +23,11 @@ class Subscriber_target_predict():
         self.ml=svm_predict()
     
     def callback(self,message):
-        self.predict=self.ml.predict(message.data)
-        print(self.predict)
-        pub.message.data=self.predict
-        pub.send_msg()
+        if self.ml.is_predict:
+            self.predict=self.ml.predict(message.data)
+            print(self.predict)
+            pub.message.data=self.predict
+            pub.send_msg()
 
 if __name__  == '__main__':
 
