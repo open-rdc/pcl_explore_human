@@ -30,7 +30,7 @@ filepath=package_path+'/dataset/'+filename
 data=np.loadtxt( filepath ,delimiter=delimiter,dtype=float)
 labels = data[:, 0:1]
 #print(labels)
-#features = preprocessing.minmax_scale(data[:, 1:])
+#features = preprocessing.minmax_scale(data[:, 4:])
 features = data[:, 4:]
 #print(features)
 x_train, x_test, y_train, y_test = train_test_split(features, labels.ravel(), test_size=test_size)
@@ -38,7 +38,6 @@ x_train, x_test, y_train, y_test = train_test_split(features, labels.ravel(), te
 clf = svm.SVC(kernel=svm_kernel, C=svm_C, gamma=svm_gamma)
 clf.fit(x_train, y_train)
 predict=clf.predict(x_test)
-#print('accuracy_score=',accuracy_score(y_test, predict), 'precision_score=',precision_score(y_test, predict), 'recall_score=',recall_score(y_test, predict))
 print('accuracy_score')
 print(accuracy_score(y_test, predict))
 print('precision_score')

@@ -13,7 +13,7 @@ class Publisher_target_predict():
         self.publisher = rospy.Publisher('/predict_target_label',Float32, queue_size=1) 
         self.publisher2 = rospy.Publisher('/target_point',PointStamped, queue_size=1) 
         self.label = Float32()
-        self.target_point =PointStamped()
+        self.target_point = PointStamped()
     
     def make_msg(self,label,description):
         self.label.data=label
@@ -23,10 +23,10 @@ class Publisher_target_predict():
         self.target_point.point.y=np.array(description.data)[1]
         self.target_point.point.z=np.array(description.data)[2]
 
-
     def send_msg(self):
         self.publisher.publish(self.label)
-        self.publisher2.publish(self.target_point) 
+        if self.label.data == 1.0:
+            self.publisher2.publish(self.target_point)
 
 class Subscriber_target_predict():
     def __init__(self,pub):
@@ -44,6 +44,7 @@ class Subscriber_target_predict():
 if __name__  == '__main__':
 
     rospy.init_node('predict_target')
+
     pub=Publisher_target_predict()
     sub=Subscriber_target_predict(pub)
     

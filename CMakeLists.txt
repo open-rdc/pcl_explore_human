@@ -141,9 +141,11 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/my_pcl_tutorial_node.cpp)
 add_executable(pcl_detect_humansize_cloud src/pcl_detect_humansize_cloud.cpp)
-add_executable(pcl_extraction_human_description src/pcl_extraction_human_description)
+add_executable(pcl_extraction_human_description src/pcl_extraction_human_description.cpp)
+add_executable(target_pose_array_node src/target_pose_array_node.cpp)
 target_link_libraries(pcl_detect_humansize_cloud ${catkin_LIBRARIES})
 target_link_libraries(pcl_extraction_human_description ${catkin_LIBRARIES})
+target_link_libraries(target_pose_array_node ${catkin_LIBRARIES})
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -175,7 +177,8 @@ target_link_libraries(pcl_extraction_human_description ${catkin_LIBRARIES})
 
 install(FILES
     scripts/svm_training.py
-    scripts/predict_target.py
+    scripts/svm_predict.py
+    scripts/predict_target_node.py
     DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts
 )
 
