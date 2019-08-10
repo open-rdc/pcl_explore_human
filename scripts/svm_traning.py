@@ -5,10 +5,16 @@ import numpy as np
 from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 from sklearn import svm
+from sklearn.svm import SVC
+from sklearn.metrics import classification_report
 from sklearn.metrics import accuracy_score, precision_score, recall_score
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import f1_score
+from sklearn.model_selection import validation_curve
+from sklearn.model_selection import learning_curve
 import pickle
+
+import matplotlib.pyplot as plt
 
 import yaml
 
@@ -29,7 +35,8 @@ filepath=package_path+'/dataset/'+filename
 
 data=np.loadtxt( filepath ,delimiter=delimiter,dtype=float)
 labels = data[:, 0:1]
-#print(labels)
+print(labels.ravel())
+print(labels)
 #features = preprocessing.minmax_scale(data[:, 4:])
 features = data[:, 4:]
 #print(features)
@@ -40,14 +47,33 @@ clf.fit(x_train, y_train)
 predict=clf.predict(x_test)
 print('accuracy_score')
 print(accuracy_score(y_test, predict))
-print('precision_score')
-print(precision_score(y_test, predict))
-print('recall_score')
-print(recall_score(y_test, predict))
-print('f1_score')
-print(f1_score(y_test,predict)) 
-print('confusion_matrix')
-print(confusion_matrix(y_test, predict,labels=[0,1]))
+print('')
+
+print(classification_report(y_test, predict))
+
+print('confusion matrix')
+print(confusion_matrix(y_test, predict,labels=[0.0,1.0,2.0]))
+
+train_sizes, train_scores, test_scores = learning_curve(clf,x_train, y_train, cv=10,train_sizes=[0.1,0.2,0.3,0.4,0.5,0.6, 0.7, 0.8, 0.9, 1.0],n_jobs=-1)
+
+train_scores_mean = np.mean(train_scores, axis=1)
+train_scores_std  = np.std(train_scores, axis=1)
+test_scores_mean = np.mean(test_scores, axis=1)
+test_scores_std  = np.std(test_scores, axis=1)
+
+plt.grid()
+
+plt.xlabel('#training samples')
+plt.ylabel('accuracy')
+plt.legend(loc='lower right')
+plt.ylim([0.7, 1.01])
+
+plt.fill_between(train_sizes, train_scores_mean - train_scores_std,train_scores_mean + train_scores_std, alpha=0.1,color="r")
+plt.plot(train_sizes, train_scores_mean, 'o-', color="r",label="Training score")
+plt.plot(train_sizes, test_scores_mean, 'o-', color="g",label="Cross-validation score")
+plt.legend(loc="best")
+
+plt.show()
 
 model_filepath = package_path + '/model/'
 model_filename = 'model.sav'
