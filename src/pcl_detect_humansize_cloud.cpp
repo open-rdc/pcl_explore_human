@@ -9,7 +9,7 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/common/common.h>
-
+#include <pcl/common/centroid.h>
 #include <pcl/kdtree/kdtree.h>
 
 #include <pcl/segmentation/extract_clusters.h>
@@ -187,6 +187,12 @@ ExtractHumansizeCloud::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_m
     //Search min_point,max_point
     pcl::getMinMax3D(*cloud_cluster,min_pt,max_pt);
 
+    // Estimate the XYZ centroid
+    Eigen::Vector4f xyz_centroid;
+    pcl::compute3DCentroid (*cloud_cluster, xyz_centroid);
+    //std::cout<<"xyz_centroid"<<std::endl;
+    //std::cout<<xyz_centroid[2]<<std::endl;
+
     double target_size[3];
     // Calculation target size
 		target_size[0] = fabs(max_pt.x - min_pt.x);
@@ -198,9 +204,11 @@ ExtractHumansizeCloud::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_m
     if(    ((target_size[0] < max_target_width_)  && (target_size[0] > min_target_width_))
 		    && ((target_size[1] < max_target_depth_)  && (target_size[1] > min_target_depth_))
 		    && ((target_size[2] < max_target_height_) && (target_size[2] > min_target_height_))
+        && (xyz_centroid[2] <= 1.0)
+        && (xyz_centroid[2] >= 0.1)
 		)
 		{
-
+      //std::cout<<xyz_centroid[2]<<std::endl;
       cloud_cluster->width = cloud_cluster->points.size ();
       cloud_cluster->height = 1;
       cloud_cluster->is_dense = true;

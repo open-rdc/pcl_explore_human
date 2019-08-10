@@ -25,7 +25,7 @@ class Publisher_target_predict():
 
     def send_msg(self):
         self.publisher.publish(self.label)
-        if self.label.data == 1.0:
+        if self.label.data == 1.0 or self.label.data == 2.0:
             self.publisher2.publish(self.target_point)
 
 class Subscriber_target_predict():
