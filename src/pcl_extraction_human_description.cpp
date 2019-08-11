@@ -143,7 +143,7 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
     //std::cout << eigen_vectors <<std::endl;
 
     //Rotation cloud from PCA data
-    //double theta=0.296706;  //17deg
+    //double theta=0.296706;  //17deg=hokuyo-lidar pitch
     double theta;
 	theta = atan2(eigen_vectors(1,0), eigen_vectors(0,0));
 	//std::cout << "Theta: " << theta << std::endl;

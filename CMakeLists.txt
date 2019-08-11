@@ -143,9 +143,11 @@ include_directories(
 add_executable(pcl_detect_humansize_cloud src/pcl_detect_humansize_cloud.cpp)
 add_executable(pcl_extraction_human_description src/pcl_extraction_human_description.cpp)
 add_executable(target_pose_array_node src/target_pose_array_node.cpp)
+add_executable(cluster_target_array src/cluster_target_array.cpp)
 target_link_libraries(pcl_detect_humansize_cloud ${catkin_LIBRARIES})
 target_link_libraries(pcl_extraction_human_description ${catkin_LIBRARIES})
 target_link_libraries(target_pose_array_node ${catkin_LIBRARIES})
+target_link_libraries(cluster_target_array ${catkin_LIBRARIES})
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
