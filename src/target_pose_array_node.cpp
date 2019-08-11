@@ -17,6 +17,7 @@ class Target_pose_array{
         ros::NodeHandle nh_;
         ros::Subscriber sub_;
         ros::Publisher pub_;
+        int array_count_=0;
 };
 
 void
@@ -36,9 +37,13 @@ Target_pose_array::callback(const geometry_msgs::PointStamped target_point)
     pose.position.z=target_point.point.z;
 
     pose_array_.poses.push_back(pose);
-
-    pub_.publish(pose_array_);
-
+    array_count_++;
+    std::cout<<array_count_<<std::endl;
+    if(array_count_==100){
+        pub_.publish(pose_array_);
+        pose_array_.poses.clear();
+        array_count_=0;
+    }
 }
 
 int main(int argc, char **argv)
