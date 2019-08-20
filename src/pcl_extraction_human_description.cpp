@@ -35,6 +35,7 @@ class ExtractHumanDescription{
             private_nh_.getParam("is_save",is_save_);
             private_nh_.getParam("label",label_);
             private_nh_.getParam("description_filename",description_filename_);
+            private_nh_.getParam("map_frame",map_frame_);
 
 
             sub_=nh_.subscribe<sensor_msgs::PointCloud2>("output_humansize_cloud",1,&ExtractHumanDescription::cluster_cloud_cb,this);
@@ -64,6 +65,7 @@ class ExtractHumanDescription{
         int slice_sectors_;
         bool is_save_;
         int label_;
+        std::string map_frame_;
         std::string description_filename_;
         std::stringstream ss;
         std::string filename_;
@@ -120,7 +122,7 @@ ExtractHumanDescription::cluster_cloud_cb(const sensor_msgs::PointCloud2ConstPtr
 	output_point->header.frame_id = cloud_msg->header.frame_id;
 
 	try{
-	    tf_listener_->transformPoint("/odom", *output_point, output_point_);
+	    tf_listener_->transformPoint(map_frame_, *output_point, output_point_);
 		}
 		catch(tf::TransformException &e){
 			ROS_WARN_STREAM("tf::TransformException: " << e.what());
