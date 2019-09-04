@@ -3,6 +3,7 @@
 #include <tf/transform_listener.h>
 #include <pcl_ros/transforms.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <jsk_recognition_msgs/BoundingBoxArray.h>
 // PCL specific includes
 #include <pcl/io/pcd_io.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -60,6 +61,7 @@ class ExtractHumansizeCloud{
       sub_ = nh_.subscribe<sensor_msgs::PointCloud2> (lrf_topic_, 1, &ExtractHumansizeCloud::cloud_cb,this);
       pub_ = nh_.advertise<sensor_msgs::PointCloud2> ("output_filter_cloud", 1);
       pub2_ = nh_.advertise<sensor_msgs::PointCloud2> ("output_humansize_cloud", 1);
+      pub3_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("Bounding_box",1);
       tf_listener_ = new tf::TransformListener();
 
     }
@@ -72,6 +74,7 @@ class ExtractHumansizeCloud{
     ros::Subscriber sub_;
     ros::Publisher pub_;
     ros::Publisher pub2_;
+    ros::Publisher pub3_;
 
     tf::TransformListener *tf_listener_;
     
@@ -173,6 +176,11 @@ ExtractHumansizeCloud::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_m
   ec.setInputCloud (cloud_boxel);
   ec.extract (cluster_indices);
 
+  jsk_recognition_msgs::BoundingBoxArray box_array;
+  jsk_recognition_msgs::BoundingBox box;
+  box.header.frame_id=robot_frame_;
+  box_array.header.frame_id=robot_frame_;
+
   for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
   {
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZI>);
@@ -192,12 +200,20 @@ ExtractHumansizeCloud::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_m
     pcl::compute3DCentroid (*cloud_cluster, xyz_centroid);
     //std::cout<<"xyz_centroid"<<std::endl;
     //std::cout<<xyz_centroid[2]<<std::endl;
+    box.pose.position.x=xyz_centroid[0];
+    box.pose.position.y=xyz_centroid[1];
+    box.pose.position.z=xyz_centroid[2];
 
     double target_size[3];
     // Calculation target size
 		target_size[0] = fabs(max_pt.x - min_pt.x);
 		target_size[1] = fabs(max_pt.y - min_pt.y);
 		target_size[2] = fabs(max_pt.z - min_pt.z);
+
+    box.dimensions.x=target_size[0];
+    box.dimensions.y=target_size[1];
+    box.dimensions.z=target_size[2];
+    box_array.boxes.push_back(box);
 
     //ROS_INFO("%lf %lf %lf",target_size[0],target_size[1],target_size[2]);
     
@@ -237,6 +253,7 @@ ExtractHumansizeCloud::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_m
       }
     }
   }
+  pub3_.publish(box_array);
 }
 
 int

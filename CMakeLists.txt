@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   sensor_msgs
+  jsk_recognition_msgs
   tf
 )
 
@@ -144,10 +145,12 @@ add_executable(pcl_detect_humansize_cloud src/pcl_detect_humansize_cloud.cpp)
 add_executable(pcl_extraction_human_description src/pcl_extraction_human_description.cpp)
 add_executable(target_pose_array_node src/target_pose_array_node.cpp)
 add_executable(cluster_target_array src/cluster_target_array.cpp)
+add_executable(binary_bayse src/binary_bayse.cpp)
 target_link_libraries(pcl_detect_humansize_cloud ${catkin_LIBRARIES})
 target_link_libraries(pcl_extraction_human_description ${catkin_LIBRARIES})
 target_link_libraries(target_pose_array_node ${catkin_LIBRARIES})
 target_link_libraries(cluster_target_array ${catkin_LIBRARIES})
+target_link_libraries(binary_bayse ${catkin_LIBRARIES})
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -177,12 +180,12 @@ target_link_libraries(cluster_target_array ${catkin_LIBRARIES})
 #   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 # )
 
-install(FILES
-    scripts/svm_training.py
-    scripts/svm_predict.py
-    scripts/predict_target_node.py
-    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts
-)
+#install(FILES
+    #scripts/svm_training.py
+    #scripts/svm_predict.py
+    #scripts/predict_target_node.py
+    #DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts
+#)
 
 
 ## Mark executables and/or libraries for installation

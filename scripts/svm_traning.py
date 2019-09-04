@@ -32,7 +32,6 @@ svm_C=f_param["svm_C"]
 svm_gamma=f_param["svm_gamma"]
 filepath=package_path+'/dataset/'+filename
 
-
 data=np.loadtxt( filepath ,delimiter=delimiter,dtype=float)
 labels = data[:, 0:1]
 print(labels.ravel())
@@ -78,4 +77,3 @@ plt.show()
 model_filepath = package_path + '/model/'
 model_filename = 'model.sav'
 pickle.dump(clf, open(model_filepath + model_filename, 'wb'))
-
