@@ -23,12 +23,16 @@ class BinaryBayse{
 
         tf::TransformListener *tf_listener_;
 
+        jsk_recognition_msgs::SimpleOccupancyGridArray grid_array;
+        jsk_recognition_msgs::SimpleOccupancyGrid grid;
+        geometry_msgs::Point point;
+
         double cell_size_=0.2;
         double search_range_ = 3.5;
         int nx_= std::round(search_range_/ cell_size_)*2;
         std::vector<std::vector<double>> matrix;
 
-        double target_prob_ = 0.6;
+        double target_prob_ = 0.55;
         double decay_prob_ = 0.45;
 };
 
@@ -74,6 +78,7 @@ BinaryBayse::callback(const geometry_msgs::PointStampedConstPtr &target_point){
             //matrix[i][j] += std::log(decay_prob_/(1-decay_prob_));
 
             if(1/(1+exp(-matrix[i][j]))>0.9){
+
                 //std::cout<<matrix[i][j]<<std::endl;
                 std::cout<<"x:"<<i<<" y:"<<j<<" prob:"<<1/(1+exp(-matrix[i][j]))<<std::endl;
                 //std::cout<<"x:"<<i<<" y:"<<j<<" value:"<<matrix[i][j]<<std::endl;
@@ -81,30 +86,30 @@ BinaryBayse::callback(const geometry_msgs::PointStampedConstPtr &target_point){
                 double x = (i-(search_range_/cell_size_))*cell_size_;
                 double y = (j-(search_range_/cell_size_))*cell_size_;
 
+                point.x=x;
+                point.y=y;
+                point.z=0;
+                grid_array.header.frame_id="base_link";
+                grid.header.frame_id="base_link";
+                grid.resolution=0.2;
+                grid.coefficients[0]=0;
+                grid.coefficients[1]=0;
+                grid.coefficients[2]=0;
+                grid.coefficients[3]=0;
+                grid.cells.push_back(point);
+                grid_array.grids.push_back(grid);
+                pub2_.publish(grid_array);
+
+
                 std::cout<<"x y"<<std::endl;
                 std::cout<<x<<std::endl;
                 std::cout<<y<<std::endl;
 
+
+
             }
         }
     }
-
-    jsk_recognition_msgs::SimpleOccupancyGridArray grid_array;
-    jsk_recognition_msgs::SimpleOccupancyGrid grid;
-    geometry_msgs::Point point;
-    point.x=1;
-    point.y=1;
-    point.z=1;
-    grid_array.header.frame_id="base_link";
-    grid.header.frame_id="base_link";
-    grid.resolution=0.2;
-    grid.coefficients[0]=0;
-    grid.coefficients[1]=0;
-    grid.coefficients[2]=0;
-    grid.coefficients[3]=0;
-    grid.cells.push_back(point);
-    grid_array.grids.push_back(grid);
-    pub2_.publish(grid_array);
 
 }
 
