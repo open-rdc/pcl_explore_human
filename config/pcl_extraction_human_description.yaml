@@ -1,8 +1,8 @@
-output_screen: false
+output_screen: true
 map_frame: odom
 is_save: false
-label: 2
-description_filename: description_2.csv
+label: 4
+description_filename: description_4.csv
 
 #description_parameter(if you change these parameter, you need to make a dataset again.)
 intensity_histgram_limit: 3000

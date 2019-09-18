@@ -15,6 +15,7 @@ from sklearn.model_selection import learning_curve
 import pickle
 
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 import yaml
 
@@ -50,8 +51,11 @@ print('')
 
 print(classification_report(y_test, predict))
 
-print('confusion matrix')
-print(confusion_matrix(y_test, predict,labels=[0.0,1.0,2.0]))
+#print('confusion matrix')
+#confusion_matrix = confusion_matrix(y_test, predict,labels=[0.0,1.0,2.0,3.0,4.0])
+#print(confusion_matrix)
+#sns.heatmap(confusion_matrix,annot=True)
+#plt.show()
 
 train_sizes, train_scores, test_scores = learning_curve(clf,x_train, y_train, cv=10,train_sizes=[0.1,0.2,0.3,0.4,0.5,0.6, 0.7, 0.8, 0.9, 1.0],n_jobs=-1)
 
@@ -65,7 +69,7 @@ plt.grid()
 plt.xlabel('#training samples')
 plt.ylabel('accuracy')
 plt.legend(loc='lower right')
-plt.ylim([0.7, 1.01])
+plt.ylim([0.4, 1.01])
 
 plt.fill_between(train_sizes, train_scores_mean - train_scores_std,train_scores_mean + train_scores_std, alpha=0.1,color="r")
 plt.plot(train_sizes, train_scores_mean, 'o-', color="r",label="Training score")
