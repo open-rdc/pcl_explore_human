@@ -61,7 +61,8 @@ class ExtractHumansizeCloud{
       sub_ = nh_.subscribe<sensor_msgs::PointCloud2> (lrf_topic_, 1, &ExtractHumansizeCloud::cloud_cb,this);
       pub_ = nh_.advertise<sensor_msgs::PointCloud2> ("output_filter_cloud", 1);
       pub2_ = nh_.advertise<sensor_msgs::PointCloud2> ("output_humansize_cloud", 1);
-      pub3_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("Bounding_box",1);
+      pub3_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("clustering_box",1);
+      pub4_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("humansize_box",1);
       tf_listener_ = new tf::TransformListener();
 
     }
@@ -75,6 +76,7 @@ class ExtractHumansizeCloud{
     ros::Publisher pub_;
     ros::Publisher pub2_;
     ros::Publisher pub3_;
+    ros::Publisher pub4_;
 
     tf::TransformListener *tf_listener_;
     
@@ -176,10 +178,16 @@ ExtractHumansizeCloud::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_m
   ec.setInputCloud (cloud_boxel);
   ec.extract (cluster_indices);
 
+  // Visualize clustering cloud
   jsk_recognition_msgs::BoundingBoxArray box_array;
   jsk_recognition_msgs::BoundingBox box;
   box.header.frame_id=robot_frame_;
   box_array.header.frame_id=robot_frame_;
+
+  jsk_recognition_msgs::BoundingBoxArray box_array2;
+  jsk_recognition_msgs::BoundingBox box2;
+  box2.header.frame_id=robot_frame_;
+  box_array2.header.frame_id=robot_frame_;
 
   for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
   {
@@ -250,6 +258,17 @@ ExtractHumansizeCloud::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_m
 				output_humansize_cloud.header.frame_id = robot_frame_;
 
 				pub2_.publish(output_humansize_cloud);
+
+        box2.pose.position.x=xyz_centroid[0];
+        box2.pose.position.y=xyz_centroid[1];
+        box2.pose.position.z=xyz_centroid[2];
+
+        box2.dimensions.x=target_size[0];
+        box2.dimensions.y=target_size[1];
+        box2.dimensions.z=target_size[2];
+        box_array2.boxes.push_back(box2);
+        
+        pub4_.publish(box_array2);
       }
     }
   }
