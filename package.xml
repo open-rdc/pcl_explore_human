@@ -54,6 +54,7 @@
   <build_depend>roscpp</build_depend>
   <build_depend>sensor_msgs</build_depend>
   <build_depend>geometry_msgs</build_depend>
+  <build_depend>nav_msgs</build_depend>
   <build_depend>jsk_recognition_msgs</build_depend>
   <build_depend>libpcl-all-dev</build_depend>
   <build_depend>eigen</build_depend>
@@ -64,6 +65,7 @@
   <build_export_depend>geometry_msgs</build_export_depend>
   <build_export_depend>jsk_recognition_msgs</build_export_depend>
   <build_export_depend>eigen</build_export_depend>
+  <build_export_depend>nav_msgs</build_export_depend>
   <exec_depend>pcl_conversions</exec_depend>
   <exec_depend>pcl_ros</exec_depend>
   <exec_depend>roscpp</exec_depend>
@@ -72,6 +74,7 @@
   <exec_depend>jsk_recognition_msgs</exec_depend>
   <exec_depend>libpcl-all</exec_depend>
   <exec_depend>eigen</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
