@@ -69,10 +69,10 @@ class ExtractHumansizeCloud{
       pub3_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("clustering_box",1);
       pub4_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("humansize_box",1);
       
-      bool_sub_.subscribe(nh_,"area_flag",10);
-      cloud_sub_.subscribe(nh_,"cloud",10);
+      bool_sub_.subscribe(nh_,"area_flag",1);
+      cloud_sub_.subscribe(nh_,lrf_topic_,1);
       
-      sync_.reset(new Synchronizer(SyncPolicy(10),bool_sub_,cloud_sub_));//,bool_sub_,cloud_sub_));
+      sync_.reset(new Synchronizer(SyncPolicy(5),bool_sub_,cloud_sub_));
       sync_->registerCallback(boost::bind(&ExtractHumansizeCloud::mfcallback,this,_1,_2));
 
       tf_listener_ = new tf::TransformListener();
@@ -128,7 +128,14 @@ class ExtractHumansizeCloud{
 
 void
 ExtractHumansizeCloud::mfcallback(const pcl_explore_human::Time_BoolConstPtr& bool_msg, const sensor_msgs::PointCloud2ConstPtr& cloud_msg){
-
+    if(bool_msg->data){
+      ROS_INFO("TRUE");
+      std::cout<<cloud_msg->data.size()<<std::endl;
+    }
+    else{
+      ROS_INFO("FALSE");
+      return;
+    }
 }
 
 void 

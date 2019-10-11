@@ -1,9 +1,20 @@
 <launch>
-     <node pkg="pcl_explore_human" type="pcl_extraction_human_description" name="pcl_extraction_human_description" output="screen" respawn="false" respawn_delay="0">
+    <arg name="map_file" default="$(find pcl_explore_human)/maps/black.yaml"/>
+
+    <node pkg="map_server" type="map_server" name="map_server" args="$(arg map_file)">
+    </node>
+
+    <node pkg="pcl_explore_human" type="search_area_node" name="search_area_node" output="screen" respawn="false" respawn_delay="0"> 
+       <rosparam command="load" file="$(find pcl_explore_human)/config/search_area_node.yaml"/>
+    </node>
+
+    <node pkg="pcl_explore_human" type="pcl_extraction_human_description" name="pcl_extraction_human_description" output="screen" respawn="false" respawn_delay="0">
         <rosparam command="load" file="$(find pcl_explore_human)/config/pcl_extraction_human_description.yaml"/>
     </node>
+
     <node pkg="pcl_explore_human" type="pcl_detect_humansize_cloud" name="pcl_detect_humansize_cloud" output="screen" respawn="false" respawn_delay="0">
         <rosparam command="load" file="$(find pcl_explore_human)/config/pcl_detect_humansize_cloud.yaml"/>
     </node>
+
     <node pkg="pcl_explore_human" type="predict_target_node.py" name="predict_target_node" output="screen" respawn="false" respawn_delay="0" />
 </launch>
