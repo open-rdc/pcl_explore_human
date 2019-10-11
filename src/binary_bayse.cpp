@@ -105,8 +105,6 @@ BinaryBayse::callback(const geometry_msgs::PointStampedConstPtr &target_point){
                 std::cout<<x<<std::endl;
                 std::cout<<y<<std::endl;
 
-
-
             }
         }
     }

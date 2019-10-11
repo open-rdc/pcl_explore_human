@@ -1,5 +1,10 @@
 #include <ros/ros.h>
 #include <ros/package.h>
+#include <pcl_explore_human/Time_Bool.h>
+#include <message_filters/subscriber.h>
+#include <message_filters/synchronizer.h>
+#include <message_filters/time_synchronizer.h>
+#include <message_filters/sync_policies/approximate_time.h>
 #include <tf/transform_listener.h>
 #include <pcl_ros/transforms.h>
 #include <sensor_msgs/PointCloud2.h>
@@ -63,6 +68,13 @@ class ExtractHumansizeCloud{
       pub2_ = nh_.advertise<sensor_msgs::PointCloud2> ("output_humansize_cloud", 1);
       pub3_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("clustering_box",1);
       pub4_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("humansize_box",1);
+      
+      bool_sub_.subscribe(nh_,"area_flag",10);
+      cloud_sub_.subscribe(nh_,"cloud",10);
+      
+      sync_.reset(new Synchronizer(SyncPolicy(10),bool_sub_,cloud_sub_));//,bool_sub_,cloud_sub_));
+      sync_->registerCallback(boost::bind(&ExtractHumansizeCloud::mfcallback,this,_1,_2));
+
       tf_listener_ = new tf::TransformListener();
 
     }
@@ -70,6 +82,7 @@ class ExtractHumansizeCloud{
   private:
 
     void cloud_cb(const sensor_msgs::PointCloud2ConstPtr& cloud_msg);
+    void mfcallback(const pcl_explore_human::Time_BoolConstPtr& bool_msg, const sensor_msgs::PointCloud2ConstPtr& cloud_msg);
 
     ros::NodeHandle nh_;
     ros::Subscriber sub_;
@@ -78,8 +91,14 @@ class ExtractHumansizeCloud{
     ros::Publisher pub3_;
     ros::Publisher pub4_;
 
+    message_filters::Subscriber<pcl_explore_human::Time_Bool> bool_sub_;
+    message_filters::Subscriber<sensor_msgs::PointCloud2> cloud_sub_;
+    typedef message_filters::sync_policies::ApproximateTime<pcl_explore_human::Time_Bool, sensor_msgs::PointCloud2> SyncPolicy;
+    typedef message_filters::Synchronizer<SyncPolicy> Synchronizer;
+    boost::shared_ptr<Synchronizer> sync_;
+
     tf::TransformListener *tf_listener_;
-    
+
     std::string robot_frame_;
     std::string lrf_topic_;
 
@@ -106,6 +125,11 @@ class ExtractHumansizeCloud{
     int cluster_number=1;   
 
 };
+
+void
+ExtractHumansizeCloud::mfcallback(const pcl_explore_human::Time_BoolConstPtr& bool_msg, const sensor_msgs::PointCloud2ConstPtr& cloud_msg){
+
+}
 
 void 
 ExtractHumansizeCloud::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)

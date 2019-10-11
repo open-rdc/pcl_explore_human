@@ -12,6 +12,9 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   roscpp
   rospy
+  message_generation
+  message_filters
+  std_msgs
   sensor_msgs
   jsk_recognition_msgs
   nav_msgs
@@ -21,8 +24,9 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
-## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
+## System dependencies are found with CMake's conventions#
+#find_package(Boost REQUIRED)
+#include_directories(${${BOOST_INCLUDE_DIR}})
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -55,11 +59,11 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+  FILES
+  Time_Bool.msg
+)
+generate_messages(DEPENDENCIES std_msgs)
 
 ## Generate services in the 'srv' folder
 # add_service_files(

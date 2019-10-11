@@ -1,0 +1,4 @@
+search_area_node:
+  robot_frame: "base_link"
+  map_frame: "odom"
+  odom_topic: "icart_mini/odom"

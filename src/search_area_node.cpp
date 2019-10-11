@@ -1,6 +1,6 @@
 #include<ros/ros.h>
 #include<tf/transform_listener.h>
-#include<std_msgs/Bool.h>
+#include<pcl_explore_human/Time_Bool.h>
 #include<geometry_msgs/PointStamped.h>
 #include<nav_msgs/OccupancyGrid.h>
 #include<nav_msgs/Odometry.h>
@@ -8,10 +8,14 @@
 class SearchArea{
     public:
         SearchArea(){
+            ros::NodeHandle pnh_("~");
+            pnh_.param<std::string>("robot_frame",robot_frame_,"base_link");
+            pnh_.param<std::string>("map_frame",map_frame_,"map");
+            pnh_.param<std::string>("odom_topic",odom_topic_,"icart_mini/odom");
             pub_= nh_.advertise<geometry_msgs::PointStamped>("map_pose",100);
-            pub2_= nh_.advertise<std_msgs::Bool>("area_flag",100);
+            pub2_= nh_.advertise<pcl_explore_human::Time_Bool>("area_flag",100);
             sub_= nh_.subscribe<nav_msgs::OccupancyGrid>("map",100,&SearchArea::mapcallback,this);
-            sub2_= nh_.subscribe<nav_msgs::Odometry>("/icart_mini/odom",1,&SearchArea::robotposecallback,this);
+            sub2_= nh_.subscribe<nav_msgs::Odometry>(odom_topic_,1,&SearchArea::robotposecallback,this);
 
             tf_listener_ = new tf::TransformListener();
         }
@@ -30,6 +34,10 @@ class SearchArea{
 
         nav_msgs::OccupancyGrid map_;
 
+        std::string robot_frame_;
+        std::string map_frame_;
+        std::string odom_topic_;
+
 };
 
 int
@@ -45,7 +53,7 @@ SearchArea::check_searcharea(const int cell){
 
     if(map_.data[cell]==100){
         ROS_DEBUG("occupancy");
-        fg=false;
+        fg=true;
     }
     else if(map_.data[cell]==0){
         ROS_DEBUG("free");
@@ -54,7 +62,7 @@ SearchArea::check_searcharea(const int cell){
 
     else if(map_.data[cell]==-1){
         ROS_DEBUG("unknown");
-        fg=true;
+        fg=false;
     }
     else {
         ROS_WARN("no defined area");
@@ -68,14 +76,13 @@ SearchArea::mapcallback(const nav_msgs::OccupancyGridConstPtr &map){
     map_.header=map->header;
     map_.info=map->info;
     map_.data=map->data;
-  
 }
 
 void
 SearchArea::robotposecallback(const nav_msgs::OdometryConstPtr &odom){
     geometry_msgs::PointStamped point;
     geometry_msgs::PointStamped conv_point;
-    std_msgs::Bool fg;
+    pcl_explore_human::Time_Bool fg;
 
     point.header=odom->header;
     point.point=odom->pose.pose.position;
@@ -86,14 +93,16 @@ SearchArea::robotposecallback(const nav_msgs::OdometryConstPtr &odom){
     }
 
     try{
-		tf_listener_->waitForTransform("odom",odom->child_frame_id,ros::Time(0),ros::Duration(100));
-        tf_listener_->transformPoint("odom",point,conv_point);
+		tf_listener_->waitForTransform(map_frame_,odom->header.frame_id,ros::Time(0),ros::Duration(100));
+        tf_listener_->transformPoint(map_frame_,point,conv_point);
 	}catch(tf::TransformException ex){
 		ROS_ERROR("%s",ex.what());
 	}
     pub_.publish(conv_point);
 
+    fg.header.stamp=ros::Time::now();
     fg.data=check_searcharea(coord_to_cell(conv_point));
+    ROS_INFO("flag_status:%d",fg.data);
     pub2_.publish(fg);
 
 }
