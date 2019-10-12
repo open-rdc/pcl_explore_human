@@ -7,7 +7,7 @@
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
   <!-- <maintainer email="jane.doe@example.com">Jane Doe</maintainer> -->
-  <maintainer email="taishi@todo.todo">taishi</maintainer>
+  <maintainer email="ambitious0816@gmail.com">taishiyamamoto</maintainer>
 
 
   <!-- One license tag required, multiple allowed, one license per tag -->
@@ -54,12 +54,9 @@
   <build_depend>roscpp</build_depend>
   <build_depend>sensor_msgs</build_depend>
   <build_depend>geometry_msgs</build_depend>
-  <build_depend>nav_msgs</build_depend>
   <build_depend>jsk_recognition_msgs</build_depend>
   <build_depend>libpcl-all-dev</build_depend>
   <build_depend>eigen</build_depend>
-  <build_depend>message_generation</build_depend>
-  <build_depend>message_filters</build_depend>
   <build_export_depend>pcl_conversions</build_export_depend>
   <build_export_depend>pcl_ros</build_export_depend>
   <build_export_depend>roscpp</build_export_depend>
@@ -67,8 +64,6 @@
   <build_export_depend>geometry_msgs</build_export_depend>
   <build_export_depend>jsk_recognition_msgs</build_export_depend>
   <build_export_depend>eigen</build_export_depend>
-  <build_export_depend>nav_msgs</build_export_depend>
-  <build_export_depend>message_filters</build_export_depend>
   <exec_depend>pcl_conversions</exec_depend>
   <exec_depend>pcl_ros</exec_depend>
   <exec_depend>roscpp</exec_depend>
@@ -77,9 +72,6 @@
   <exec_depend>jsk_recognition_msgs</exec_depend>
   <exec_depend>libpcl-all</exec_depend>
   <exec_depend>eigen</exec_depend>
-  <exec_depend>nav_msgs</exec_depend>
-  <exec_depend>message_filters</exec_depend>
-  <exec_depend>message_runtime</exec_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

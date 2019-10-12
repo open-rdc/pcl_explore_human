@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(pcl_explore_human)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -12,12 +12,9 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   roscpp
   rospy
-  message_generation
-  message_filters
   std_msgs
   sensor_msgs
   jsk_recognition_msgs
-  nav_msgs
   tf
 )
 
@@ -59,11 +56,11 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-add_message_files(
-  FILES
-  Time_Bool.msg
-)
-generate_messages(DEPENDENCIES std_msgs)
+#add_message_files(
+#  FILES
+#  Time_Bool.msg
+#)
+#generate_messages(DEPENDENCIES std_msgs)
 
 ## Generate services in the 'srv' folder
 # add_service_files(

@@ -1,6 +1,6 @@
 #include<ros/ros.h>
 #include<tf/transform_listener.h>
-#include<pcl_explore_human/Time_Bool.h>
+#include<std_msgs/Bool.h>
 #include<geometry_msgs/PointStamped.h>
 #include<nav_msgs/OccupancyGrid.h>
 #include<nav_msgs/Odometry.h>
@@ -11,7 +11,7 @@ class SearchArea{
             ros::NodeHandle pnh_("~");
             pnh_.param<std::string>("robot_frame",robot_frame_,"base_link");
             pnh_.param<std::string>("map_frame",map_frame_,"map");
-            pub_= nh_.advertise<pcl_explore_human::Time_Bool>("area_flag",100);
+            pub_= nh_.advertise<std_msgs::Bool>("area_flag",100);
             sub_= nh_.subscribe<nav_msgs::OccupancyGrid>("map",100,&SearchArea::mapcallback,this);
 
             tf_listener_ = new tf::TransformListener();
@@ -77,7 +77,7 @@ SearchArea::mapcallback(const nav_msgs::OccupancyGridConstPtr &map){
 
 void 
 SearchArea::publish(){
-    pcl_explore_human::Time_Bool fg;
+    std_msgs::Bool fg;
     tf::StampedTransform transform;
 
      if(map_.data.empty()){
@@ -95,7 +95,6 @@ SearchArea::publish(){
     double x=transform.getOrigin().x();
     double y=transform.getOrigin().y();
 
-    fg.header.stamp=ros::Time::now();
     fg.data=check_searcharea(coord_to_cell(x,y));
     ROS_DEBUG("flag_status:%d",fg.data);
     pub_.publish(fg);

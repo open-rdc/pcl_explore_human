@@ -1,12 +1,12 @@
 #include <ros/ros.h>
 #include <ros/package.h>
-#include <pcl_explore_human/Time_Bool.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/time_synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <tf/transform_listener.h>
 #include <pcl_ros/transforms.h>
+#include <std_msgs/Bool.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <jsk_recognition_msgs/BoundingBoxArray.h>
 // PCL specific includes
@@ -63,7 +63,7 @@ class ExtractHumansizeCloud{
       private_nh_.getParam("save_to_pcd", save_to_pcd_);
 
       sub_ = nh_.subscribe<sensor_msgs::PointCloud2> (lrf_topic_, 1, &ExtractHumansizeCloud::cloud_cb,this);
-      sub2_ = nh_.subscribe<pcl_explore_human::Time_Bool> ("area_flag", 1, &ExtractHumansizeCloud::flag_cb,this);
+      sub2_ = nh_.subscribe<std_msgs::Bool> ("area_flag", 1, &ExtractHumansizeCloud::flag_cb,this);
       pub_ = nh_.advertise<sensor_msgs::PointCloud2> ("output_filter_cloud", 10);
       pub2_ = nh_.advertise<sensor_msgs::PointCloud2> ("output_humansize_cloud", 1);
       pub3_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("clustering_box",10);
@@ -82,7 +82,7 @@ class ExtractHumansizeCloud{
   private:
 
     void cloud_cb(const sensor_msgs::PointCloud2ConstPtr& cloud_msg);
-    void flag_cb(const pcl_explore_human::Time_BoolConstPtr& flag_msg);
+    void flag_cb(const std_msgs::BoolConstPtr& flag_msg);
     //void mfcallback(const pcl_explore_human::Time_BoolConstPtr& bool_msg, const sensor_msgs::PointCloud2ConstPtr& cloud_msg);
 
     ros::NodeHandle nh_;
@@ -144,7 +144,7 @@ ExtractHumansizeCloud::mfcallback(const pcl_explore_human::Time_BoolConstPtr& bo
 */
 
 void
-ExtractHumansizeCloud::flag_cb(const pcl_explore_human::Time_BoolConstPtr& flag_msg){
+ExtractHumansizeCloud::flag_cb(const std_msgs::BoolConstPtr& flag_msg){
     search_area_flag_=flag_msg->data;
 }
 
