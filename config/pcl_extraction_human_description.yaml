@@ -1,4 +1,4 @@
-output_screen: true
+output_screen: false
 map_frame: odom
 is_save: false
 label: 4

@@ -83,7 +83,6 @@ SearchArea::robotposecallback(const nav_msgs::OdometryConstPtr &odom){
     geometry_msgs::PointStamped point;
     geometry_msgs::PointStamped conv_point;
     pcl_explore_human::Time_Bool fg;
-    std::cout<<map_frame_<<std::endl;
 
     point.header=odom->header;
     point.point=odom->pose.pose.position;
@@ -101,7 +100,7 @@ SearchArea::robotposecallback(const nav_msgs::OdometryConstPtr &odom){
 	}
     pub_.publish(conv_point);
 
-    fg.header.stamp=ros::Time::now();
+    fg.header.stamp=odom->header.stamp;
     fg.data=check_searcharea(coord_to_cell(conv_point));
     ROS_DEBUG("flag_status:%d",fg.data);
     pub2_.publish(fg);

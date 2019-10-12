@@ -28,7 +28,6 @@
 #include <string>
 #include <sstream>
 
-
 void pass_through_filter(pcl::PointCloud<pcl::PointXYZI>::Ptr cloud,bool LimitsNegative,const std::string &FieldName,float min_Limits,float max_Limits){
   pcl::PassThrough<pcl::PointXYZI> pass_x;
 	pass_x.setInputCloud(cloud);
@@ -64,17 +63,18 @@ class ExtractHumansizeCloud{
       private_nh_.getParam("save_to_pcd", save_to_pcd_);
 
       sub_ = nh_.subscribe<sensor_msgs::PointCloud2> (lrf_topic_, 1, &ExtractHumansizeCloud::cloud_cb,this);
-      pub_ = nh_.advertise<sensor_msgs::PointCloud2> ("output_filter_cloud", 1);
+      sub2_ = nh_.subscribe<pcl_explore_human::Time_Bool> ("area_flag", 1, &ExtractHumansizeCloud::flag_cb,this);
+      pub_ = nh_.advertise<sensor_msgs::PointCloud2> ("output_filter_cloud", 10);
       pub2_ = nh_.advertise<sensor_msgs::PointCloud2> ("output_humansize_cloud", 1);
-      pub3_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("clustering_box",1);
-      pub4_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("humansize_box",1);
+      pub3_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("clustering_box",10);
+      pub4_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("humansize_box",10);
       
+      /*
       bool_sub_.subscribe(nh_,"area_flag",1);
       cloud_sub_.subscribe(nh_,lrf_topic_,1);
-      
       sync_.reset(new Synchronizer(SyncPolicy(5),bool_sub_,cloud_sub_));
       sync_->registerCallback(boost::bind(&ExtractHumansizeCloud::mfcallback,this,_1,_2));
-
+      */
       tf_listener_ = new tf::TransformListener();
 
     }
@@ -82,21 +82,23 @@ class ExtractHumansizeCloud{
   private:
 
     void cloud_cb(const sensor_msgs::PointCloud2ConstPtr& cloud_msg);
-    void mfcallback(const pcl_explore_human::Time_BoolConstPtr& bool_msg, const sensor_msgs::PointCloud2ConstPtr& cloud_msg);
+    void flag_cb(const pcl_explore_human::Time_BoolConstPtr& flag_msg);
+    //void mfcallback(const pcl_explore_human::Time_BoolConstPtr& bool_msg, const sensor_msgs::PointCloud2ConstPtr& cloud_msg);
 
     ros::NodeHandle nh_;
     ros::Subscriber sub_;
+    ros::Subscriber sub2_;
     ros::Publisher pub_;
     ros::Publisher pub2_;
     ros::Publisher pub3_;
     ros::Publisher pub4_;
-
+    /*
     message_filters::Subscriber<pcl_explore_human::Time_Bool> bool_sub_;
     message_filters::Subscriber<sensor_msgs::PointCloud2> cloud_sub_;
     typedef message_filters::sync_policies::ApproximateTime<pcl_explore_human::Time_Bool, sensor_msgs::PointCloud2> SyncPolicy;
     typedef message_filters::Synchronizer<SyncPolicy> Synchronizer;
     boost::shared_ptr<Synchronizer> sync_;
-
+    */
     tf::TransformListener *tf_listener_;
 
     std::string robot_frame_;
@@ -119,6 +121,8 @@ class ExtractHumansizeCloud{
     double min_target_height_;
     double max_target_height_;
 
+    bool search_area_flag_;
+
     bool save_to_pcd_;
     std::string path_ = ros::package::getPath("pcl_explore_human");
     std::string filename_;
@@ -126,21 +130,31 @@ class ExtractHumansizeCloud{
 
 };
 
+/*
 void
 ExtractHumansizeCloud::mfcallback(const pcl_explore_human::Time_BoolConstPtr& bool_msg, const sensor_msgs::PointCloud2ConstPtr& cloud_msg){
     if(bool_msg->data){
       ROS_INFO("TRUE");
-      std::cout<<cloud_msg->data.size()<<std::endl;
     }
     else{
       ROS_INFO("FALSE");
       return;
     }
 }
+*/
+
+void
+ExtractHumansizeCloud::flag_cb(const pcl_explore_human::Time_BoolConstPtr& flag_msg){
+    search_area_flag_=flag_msg->data;
+}
 
 void 
 ExtractHumansizeCloud::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
-{
+{ 
+  if(!search_area_flag_){
+    ROS_DEBUG("Not_search_area");
+    return;  
+  }
   //transform cloud
   tf::StampedTransform transform;
   sensor_msgs::PointCloud2 transformed_cloud;
@@ -285,7 +299,7 @@ ExtractHumansizeCloud::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_m
 				pcl::toROSMsg(*cloud_cluster, output_humansize_cloud);
 
 				//Add header to output cloud
-				output_humansize_cloud.header = cloud_msg->header;
+				//output_humansize_cloud.header = cloud_msg->header;
 				output_humansize_cloud.header.frame_id = robot_frame_;
 
 				pub2_.publish(output_humansize_cloud);

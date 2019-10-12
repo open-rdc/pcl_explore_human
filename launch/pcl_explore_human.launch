@@ -1,5 +1,5 @@
 <launch>
-    <arg name="map_file" default="$(find pcl_explore_human)/maps/black.yaml"/>
+    <arg name="map_file" default="$(find pcl_explore_human)/maps/black_and_white.yaml"/>
 
     <node pkg="map_server" type="map_server" name="map_server" args="$(arg map_file)">
     </node>
