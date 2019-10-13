@@ -41,6 +41,8 @@ class ExtractHumansizeCloud{
   public:
     ExtractHumansizeCloud(){
 
+      search_area_flag_=false;
+
       ros::NodeHandle private_nh_("~");
      
       private_nh_.param<std::string>("robot_frame",robot_frame_,"base_link");
@@ -313,11 +315,11 @@ ExtractHumansizeCloud::cloud_cb (const sensor_msgs::PointCloud2ConstPtr& cloud_m
         box2.dimensions.z=target_size[2];
         box_array2.boxes.push_back(box2);
         
-        pub4_.publish(box_array2);
       }
     }
   }
   pub3_.publish(box_array);
+  pub4_.publish(box_array2);
 }
 
 int
