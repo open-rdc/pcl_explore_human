@@ -43,24 +43,24 @@ class ExtractHumansizeCloud{
 
       ros::NodeHandle private_nh_("~");
      
-      private_nh_.getParam("robot_frame",robot_frame_);
-      private_nh_.getParam("lrf_topic",lrf_topic_);
-      private_nh_.getParam("voxel_resolution",voxel_resolution_);
-      private_nh_.getParam("outlier_mean",outlier_mean_);
-      private_nh_.getParam("outlier_threshold",outlier_threshold_);
-      private_nh_.getParam("search_range",search_range_);
-      private_nh_.getParam("min_horizontal_height",min_horizontal_height_);
-      private_nh_.getParam("max_horizontal_height",max_horizontal_height_);
-      private_nh_.getParam("cluster_tolerance",cluster_tolerance_);
-      private_nh_.getParam("min_cluster_size",min_cluster_size_);
-      private_nh_.getParam("max_cluster_size",max_cluster_size_);
-      private_nh_.getParam("min_target_width",min_target_width_);
-      private_nh_.getParam("max_target_width",max_target_width_);
-      private_nh_.getParam("min_target_depth",min_target_depth_);
-      private_nh_.getParam("max_target_depth",max_target_depth_);
-      private_nh_.getParam("min_target_height",min_target_height_);
-      private_nh_.getParam("max_target_height",max_target_height_);
-      private_nh_.getParam("save_to_pcd", save_to_pcd_);
+      private_nh_.param<std::string>("robot_frame",robot_frame_,"base_link");
+      private_nh_.param<std::string>("lrf_topic",lrf_topic_,"hokuyo3d/hokuyo_cloud2");
+      private_nh_.param<double>("voxel_resolution",voxel_resolution_,0.05);
+      private_nh_.param<double>("outlier_mean",outlier_mean_,10.0);
+      private_nh_.param<double>("outlier_threshold",outlier_threshold_,0.25);
+      private_nh_.param<double>("search_range",search_range_,3.0);
+      private_nh_.param<double>("min_horizontal_height",min_horizontal_height_,-20.0);
+      private_nh_.param<double>("max_horizontal_height",max_horizontal_height_,-0.25);
+      private_nh_.param<double>("cluster_tolerance",cluster_tolerance_,0.4);
+      private_nh_.param<int>("min_cluster_size",min_cluster_size_,10);
+      private_nh_.param<int>("max_cluster_size",max_cluster_size_,100000);
+      private_nh_.param<double>("min_target_width",min_target_width_,0.2);
+      private_nh_.param<double>("max_target_width",max_target_width_,1.6);
+      private_nh_.param<double>("min_target_depth",min_target_depth_,0.2);
+      private_nh_.param<double>("max_target_depth",max_target_depth_,1.6);
+      private_nh_.param<double>("min_target_height",min_target_height_,0.5);
+      private_nh_.param<double>("max_target_height",max_target_height_,2.0);
+      private_nh_.param<bool>("save_to_pcd", save_to_pcd_,false);
 
       sub_ = nh_.subscribe<sensor_msgs::PointCloud2> (lrf_topic_, 1, &ExtractHumansizeCloud::cloud_cb,this);
       sub2_ = nh_.subscribe<std_msgs::Bool> ("area_flag", 1, &ExtractHumansizeCloud::flag_cb,this);

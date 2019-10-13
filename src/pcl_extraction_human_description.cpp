@@ -28,14 +28,14 @@ class ExtractHumanDescription{
         ExtractHumanDescription(){
             
             ros::NodeHandle private_nh_("~");
-            private_nh_.getParam("output_screen",output_screen_);
-            private_nh_.getParam("intensity_histgram_limit",intensity_histgram_limit_);
-            private_nh_.getParam("intensity_histgram_bin",intensity_histgram_bin_);
-            private_nh_.getParam("slice_sectors",slice_sectors_);
-            private_nh_.getParam("is_save",is_save_);
-            private_nh_.getParam("label",label_);
-            private_nh_.getParam("description_filename",description_filename_);
-            private_nh_.getParam("map_frame",map_frame_);
+            private_nh_.param<bool>("output_screen",output_screen_,false);
+            private_nh_.param<double>("intensity_histgram_limit",intensity_histgram_limit_,3000.0);
+            private_nh_.param<int>("intensity_histgram_bin",intensity_histgram_bin_,25);
+            private_nh_.param<int>("slice_sectors",slice_sectors_,10);
+            private_nh_.param<bool>("is_save",is_save_,false);
+            private_nh_.param<int>("label",label_,0);
+            private_nh_.param<std::string>("description_filename",description_filename_,"description.csv");
+            private_nh_.param<std::string>("map_frame",map_frame_,"map");
 
 
             sub_=nh_.subscribe<sensor_msgs::PointCloud2>("output_humansize_cloud",1,&ExtractHumanDescription::cluster_cloud_cb,this);
