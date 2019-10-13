@@ -16,5 +16,7 @@
         <rosparam command="load" file="$(find pcl_explore_human)/config/pcl_detect_humansize_cloud.yaml"/>
     </node>
 
-    <node pkg="pcl_explore_human" type="predict_target_node.py" name="predict_target_node" output="screen" respawn="false" respawn_delay="0" />
+    <node pkg="pcl_explore_human" type="predict_target_node.py" name="predict_target_node" output="screen" respawn="false" respawn_delay="0"> 
+                <rosparam command="load" file="$(find pcl_explore_human)/config/predict_target_node.yaml"/>
+    </node>
 </launch>

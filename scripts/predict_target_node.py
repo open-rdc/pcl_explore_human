@@ -12,13 +12,15 @@ class Publisher_target_predict():
     def __init__(self):
         self.publisher = rospy.Publisher('/predict_target_label',Float32, queue_size=1) 
         self.publisher2 = rospy.Publisher('/target_point',PointStamped, queue_size=1) 
+        self.map_frame=rospy.get_param('predict_target_node/map_frame','map')
+        
         self.label = Float32()
         self.target_point = PointStamped()
     
     def make_msg(self,label,description):
         self.label.data=label
         self.target_point.header.stamp=rospy.Time.now()
-        self.target_point.header.frame_id='odom'
+        self.target_point.header.frame_id=self.map_frame
         self.target_point.point.x=np.array(description.data)[0]
         self.target_point.point.y=np.array(description.data)[1]
         self.target_point.point.z=np.array(description.data)[2]
