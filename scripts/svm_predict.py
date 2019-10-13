@@ -12,7 +12,7 @@ class svm_predict:
         self.rospack = rospkg.RosPack()
         self.package_path=self.rospack.get_path('pcl_explore_human')
         self.f = open(self.package_path+'/config/'+'svm_predict.yaml', "r+")
-        self.f_param = yaml.load(self.f)
+        self.f_param = yaml.load(self.f,Loader=yaml.FullLoader)
         self.is_predict=self.f_param["is_predict"]
         self.model_filepath = self.package_path + '/model/'
         self.model_filename = 'model.sav'

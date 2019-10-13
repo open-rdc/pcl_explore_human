@@ -2,8 +2,10 @@
     <arg name="map_file" default="$(find pcl_explore_human)/maps/black.yaml"/>
 
     <node pkg="map_server" type="map_server" name="map_server" args="$(arg map_file)">
-    </node>
-
+			<remap from="/map" to="/map_for_searcharea"/>
+			<param name="frame_id" value="/map_for_searcharea"/>
+		</node>
+		<node pkg="tf" type="static_transform_publisher" name="static_transform_publisher" args="0 0 0 0 0 0 map_for_searcharea map 10"/>
     <node pkg="pcl_explore_human" type="search_area_node" name="search_area_node" output="screen" respawn="false" respawn_delay="0"> 
        <rosparam command="load" file="$(find pcl_explore_human)/config/search_area_node.yaml"/>
     </node>

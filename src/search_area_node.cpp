@@ -12,7 +12,7 @@ class SearchArea{
             pnh_.param<std::string>("robot_frame",robot_frame_,"base_link");
             pnh_.param<std::string>("map_frame",map_frame_,"map");
             pub_= nh_.advertise<std_msgs::Bool>("area_flag",100);
-            sub_= nh_.subscribe<nav_msgs::OccupancyGrid>("map",100,&SearchArea::mapcallback,this);
+            sub_= nh_.subscribe<nav_msgs::OccupancyGrid>("map_for_searcharea",100,&SearchArea::mapcallback,this);
 
             tf_listener_ = new tf::TransformListener();
         }
