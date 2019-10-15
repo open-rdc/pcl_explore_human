@@ -1,8 +1,8 @@
-robot_frame: base_link
+robot_frame: "base_link"
 save_to_pcd: false
 
 #description_parameter(if you change these parameter, you need to make a dataset again.)
-lrf_topic: hokuyo3d/hokuyo_cloud2
+lrf_topic: "hokuyo3d/hokuyo_cloud2"
 voxel_resolution: 0.05
 outlier_mean: 10
 outlier_threshold: 0.25
