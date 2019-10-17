@@ -1,0 +1,3 @@
+resolution: 0.20
+target_prob: 0.55
+target_thresh: 0.90
