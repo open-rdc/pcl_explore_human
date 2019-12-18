@@ -29,6 +29,9 @@ $ cd ~/catkin_ws/ && rosdep install --from-paths src --ignore-src -r -y
 
 ###パッケージのビルド
 $ catkin build pcl_explore_human
+
+###準備
+$ roscd pcl_explore_human && mkdir -p dataset/pcd
 ```
 
 ## 実行例
